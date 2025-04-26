@@ -6,3 +6,6 @@ requests
 langchain
 boto3
 pytest
+pydantic_settings
+langchain_community
+python-multipart

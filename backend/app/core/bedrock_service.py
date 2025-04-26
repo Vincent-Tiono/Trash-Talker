@@ -1,5 +1,5 @@
 # app/core/bedrock_service.py
-from langchain.chat_models import BedrockChat
+from langchain_community.chat_models import BedrockChat
 from langchain.chains import LLMChain
 from langchain.prompts import (
     ChatPromptTemplate,
