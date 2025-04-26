@@ -8,6 +8,14 @@ import {
   SetStateAction,
 } from "react";
 
+export interface Disposal {
+  id: string;
+  user_id: string;
+  datetime: string;
+  category: string;
+  sub_category: string;
+}
+
 // Define the User interface
 export interface User {
   id: string;
@@ -18,6 +26,11 @@ export interface User {
   exp: number;
   level: number;
   total_disposal: number;
+
+  topUsersRegion?: User[];
+  topUsersGlobal?: User[];
+
+  disposals?: Disposal[];
 }
 
 // Define the context type

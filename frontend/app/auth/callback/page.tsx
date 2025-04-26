@@ -3,7 +3,7 @@
 import { useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../components/supabase";
-import { UserContext, User } from "../../../hooks/UserContext";
+import { UserContext, User, Disposal } from "../../../hooks/UserContext";
 
 export default function Callback() {
   const router = useRouter();
@@ -30,6 +30,31 @@ export default function Callback() {
         .eq("email", user.email)
         .maybeSingle();
 
+      // get top 10 max or less users from user table that region is same as user region
+      // sort by level first then by exp
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .eq("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      // get top 10 max or less users from user table global
+      // sort by level first then by exp
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      // get all from disposal table where user_id is same as user.id
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", user.id);
+
       const userData = {
         id: user.id,
         name: user.user_metadata.name,
@@ -39,6 +64,10 @@ export default function Callback() {
         exp: 0,
         level: 1,
         total_disposal: 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+
+        disposals: (disposals as Disposal[]) || [],
       };
 
       setUser(userData as User);

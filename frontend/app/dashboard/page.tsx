@@ -37,35 +37,38 @@ export default function Dashboard() {
   const userRegion = user?.region || "Unknown Region";
   const userEmail = user?.email || "";
   const level = user?.level || 1;
-  const xp = user?.exp || 0;
+  const exp = user?.exp || 0;
   const totalDisposal = user?.total_disposal || 0;
 
-  const nextLevelXp = 1000 * level;
+  const nextLevelExp = 100 * level;
   const badge = "Trash Trainee";
+  const topUsersRegion = user?.topUsersRegion || [];
 
-  const [recentActivity, setRecentActivity] = useState([
-    {
-      id: 1,
-      type: "Plastic Bottle",
-      category: "Recyclable",
-      points: 50,
-      date: "Today, 2:30 PM",
-    },
-    {
-      id: 2,
-      type: "Banana Peel",
-      category: "Organic",
-      points: 30,
-      date: "Today, 11:15 AM",
-    },
-    {
-      id: 3,
-      type: "Cardboard Box",
-      category: "Recyclable",
-      points: 70,
-      date: "Yesterday, 4:45 PM",
-    },
-  ]);
+  const recentActivity = user?.disposals || [];
+
+  // const [recentActivity, setRecentActivity] = useState([
+  //   {
+  //     id: 1,
+  //     type: "Plastic Bottle",
+  //     category: "Recyclable",
+  //     points: 50,
+  //     date: "Today, 2:30 PM",
+  //   },
+  //   {
+  //     id: 2,
+  //     type: "Banana Peel",
+  //     category: "Organic",
+  //     points: 30,
+  //     date: "Today, 11:15 AM",
+  //   },
+  //   {
+  //     id: 3,
+  //     type: "Cardboard Box",
+  //     category: "Recyclable",
+  //     points: 70,
+  //     date: "Yesterday, 4:45 PM",
+  //   },
+  // ]);
 
   return (
     <>
@@ -129,13 +132,13 @@ export default function Dashboard() {
                 <div className="space-y-4">
                   <div>
                     <div className="progress-label">
-                      <span>XP Progress</span>
+                      <span>EXP Progress</span>
                       <span>
-                        {xp} / {nextLevelXp}
+                        {exp} / {nextLevelExp}
                       </span>
                     </div>
                     <Progress
-                      value={(xp / nextLevelXp) * 100}
+                      value={(exp / nextLevelExp) * 100}
                       className="h-2"
                     />
                   </div>
@@ -148,7 +151,7 @@ export default function Dashboard() {
                       <p className="dashboard-stat-label">Items Recycled</p>
                     </div>
                     <div className="dashboard-stat">
-                      <p className="dashboard-stat-value font-fredoka">{xp}</p>
+                      <p className="dashboard-stat-value font-fredoka">{exp}</p>
                       <p className="dashboard-stat-label">Total XP</p>
                     </div>
                   </div>
@@ -179,47 +182,48 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="leaderboard-item bg-primary/5">
-                    <div className="leaderboard-rank bg-primary text-white">
-                      1
-                    </div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">EcoNinja</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 12 • 7,890 XP</p>
+                  {topUsersRegion && topUsersRegion.length > 0 ? (
+                    topUsersRegion.map((user, index) => (
+                      <div
+                        key={user.id || index}
+                        className="leaderboard-item bg-primary/5 hover:bg-primary/10 transition-colors"
+                      >
+                        <div className="leaderboard-rank bg-primary text-white">
+                          {index + 1}
+                        </div>
+                        <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-background">
+                          <Image
+                            src={user.image || "/default.png"}
+                            alt={`${user.name}'s profile`}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        <div className="leaderboard-user flex-1"></div>
+                        <p className="leaderboard-user-name font-medium truncate">
+                          {user.name}
+                        </p>
+                        <div className="leaderboard-user-stats text-xs text-muted-foreground">
+                          <p>
+                            Level {user.level} • {user.exp} EXP
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="leaderboard-item">
-                    <div className="leaderboard-rank bg-muted">2</div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">RecycleQueen</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 10 • 6,240 XP</p>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <div className="w-12 h-12 bg-muted/30 rounded-full flex items-center justify-center mb-3">
+                        <Award className="h-6 w-6 text-muted-foreground/60" />
                       </div>
+                      <h3 className="text-sm font-medium mb-1">
+                        No leaderboard data
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Start recycling to see rankings
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="leaderboard-item">
-                    <div className="leaderboard-rank bg-muted">3</div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">GreenGuru</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 9 • 5,780 XP</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="leaderboard-item bg-muted/30">
-                    <div className="leaderboard-rank bg-muted">8</div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">You</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 5 • 2,500 XP</p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
 
                   <Link
                     href="/leaderboard"
@@ -269,7 +273,7 @@ export default function Dashboard() {
                       Prove Disposal
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      Submit proof of proper disposal to earn XP and level up
+                      Submit proof of proper disposal to earn EXP and level up
                       your recycling game
                     </p>
                     <Button className="w-full group-hover:bg-primary/90 transition-colors">
@@ -290,29 +294,46 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="activity-item">
-                      <div className="activity-icon">
-                        {activity.category === "Recyclable" ? (
-                          <Recycle className="h-5 w-5" />
-                        ) : (
-                          <Trash2 className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div className="activity-content">
-                        <div className="activity-header">
-                          <p className="activity-title">{activity.type}</p>
-                          <p className="activity-points">
-                            +{activity.points} XP
-                          </p>
+                  {recentActivity && recentActivity.length > 0 ? (
+                    recentActivity.map((activity) => (
+                      <div key={activity.id} className="activity-item">
+                        <div className="activity-icon">
+                          {activity.category === "Recyclable" ? (
+                            <Recycle className="h-5 w-5" />
+                          ) : (
+                            <Trash2 className="h-5 w-5" />
+                          )}
                         </div>
-                        <div className="activity-footer">
-                          <p>{activity.category}</p>
-                          <p>{activity.date}</p>
+                        <div className="activity-content">
+                          <div className="activity-header">
+                            <p className="activity-title">
+                              {activity.sub_category}
+                            </p>
+                            <p className="activity-points">+10 EXP</p>
+                          </div>
+                          <div className="activity-footer">
+                            <p>{activity.category}</p>
+                            <p>{activity.datetime}</p>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+                        <Trash2 className="h-8 w-8 text-muted-foreground/60" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-1">
+                        No activity yet
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        Start scanning trash to see your activity here
+                      </p>
+                      <Button variant="outline" className="mt-4" asChild>
+                        <Link href="/scan-trash">Start Scanning</Link>
+                      </Button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
