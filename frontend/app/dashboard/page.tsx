@@ -41,7 +41,18 @@ export default function Dashboard() {
   const totalDisposal = user?.total_disposal || 0;
 
   const nextLevelExp = 100 * level;
-  const badge = "Trash Trainee";
+  let badge = "";
+  if (level < 5) {
+    badge = "Real Trash";
+  } else if (level < 10) {
+    badge = "Trash Trainee";
+  } else if (level < 15) {
+    badge = "Bin Boss";
+  } else if (level < 20) {
+    badge = "Garbage Guru";
+  } else {
+    badge = "Lord of the Litter";
+  }
   const topUsersRegion = user?.topUsersRegion || [];
 
   const recentActivity = user?.disposals || [];
@@ -121,7 +132,7 @@ export default function Dashboard() {
                   <h3 className="font-fredoka text-xl font-bold mb-1">
                     {userName}
                   </h3>
-                  <h3 className="font-fredoka text-xs mb-1 text-muted-foreground mb-5">
+                  <h3 className="font-fredoka text-xs text-muted-foreground mb-5">
                     {userEmail}
                   </h3>
                   <p className="text-muted-foreground">
@@ -186,12 +197,13 @@ export default function Dashboard() {
                     topUsersRegion.map((user, index) => (
                       <div
                         key={user.id || index}
-                        className="leaderboard-item bg-primary/5 hover:bg-primary/10 transition-colors"
+                        className="leaderboard-item flex items-center gap-3 bg-primary/5 hover:bg-primary/10 p-3 rounded-lg transition-colors"
                       >
-                        <div className="leaderboard-rank bg-primary text-white">
+                        <div className="leaderboard-rank flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </div>
-                        <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-background">
+
+                        <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-background flex-shrink-0">
                           <Image
                             src={user.image || "/default.png"}
                             alt={`${user.name}'s profile`}
@@ -200,13 +212,13 @@ export default function Dashboard() {
                             className="object-cover w-full h-full"
                           />
                         </div>
-                        <div className="leaderboard-user flex-1"></div>
-                        <p className="leaderboard-user-name font-medium truncate">
-                          {user.name}
-                        </p>
-                        <div className="leaderboard-user-stats text-xs text-muted-foreground">
-                          <p>
-                            Level {user.level} • {user.exp} EXP
+
+                        <div className="flex-1 min-w-0">
+                          <p className="leaderboard-user-name font-medium truncate">
+                            {user.name}
+                          </p>
+                          <p className="leaderboard-user-stats text-xs text-muted-foreground truncate">
+                            Level {user.level} - {user.exp} EXP
                           </p>
                         </div>
                       </div>
@@ -229,7 +241,7 @@ export default function Dashboard() {
                     href="/leaderboard"
                     className="flex items-center justify-center text-sm text-primary hover:underline mt-2"
                   >
-                    View full leaderboard{" "}
+                    View full leaderboard
                     <ArrowRight className="ml-1 h-3 w-3" />
                   </Link>
                 </div>
@@ -349,69 +361,66 @@ export default function Dashboard() {
                 <div className="relative">
                   <div className="absolute top-0 bottom-0 left-[15px] w-[2px] bg-muted" />
 
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted">
-                      <div className="timeline-marker-inner bg-primary" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title">Real Trash</h3>
-                      <p className="timeline-subtitle">
-                        Level 1 • Starting your journey
-                      </p>
-                    </div>
-                  </div>
+                  {[
+                    {
+                      levelReq: 1,
+                      title: "Real Trash",
+                      subtitle: "Level 1 • Starting your journey",
+                    },
+                    {
+                      levelReq: 5,
+                      title: "♻️ Trash Trainee",
+                      subtitle: "Level 5 • Learning the basics",
+                    },
+                    {
+                      levelReq: 10,
+                      title: "🚮 Bin Boss",
+                      subtitle: "Level 10 • Current Level",
+                    },
+                    {
+                      levelReq: 15,
+                      title: "🧹 Garbage Guru",
+                      subtitle: "Level 15 • Master the art of recycling",
+                    },
+                    {
+                      levelReq: 20,
+                      title: "👑 Lord of the Litter",
+                      subtitle: "Level 20+ • The ultimate recycling champion",
+                    },
+                  ].map((item, idx, arr) => {
+                    const nextLevelReq = arr[idx + 1]?.levelReq ?? Infinity;
+                    const isAchieved = level >= item.levelReq;
+                    const isCurrent =
+                      level >= item.levelReq && level < nextLevelReq;
 
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted">
-                      <div className="timeline-marker-inner bg-primary" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title">♻️ Trash Trainee</h3>
-                      <p className="timeline-subtitle">
-                        Level 5 • Learning the basics
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-primary">
-                      <Check className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title">🚮 Bin Boss</h3>
-                      <p className="timeline-subtitle">
-                        Level 10 • Current Level
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted/50">
-                      <div className="timeline-marker-inner bg-muted" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title text-muted-foreground">
-                        🧹 Garbage Guru
-                      </h3>
-                      <p className="timeline-subtitle">
-                        Level 15 • Master the art of recycling
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted/50">
-                      <div className="timeline-marker-inner bg-muted" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title text-muted-foreground">
-                        👑 Lord of the Litter
-                      </h3>
-                      <p className="timeline-subtitle">
-                        Level 20+ • The ultimate recycling champion
-                      </p>
-                    </div>
-                  </div>
+                    return (
+                      <div className="timeline-item" key={item.levelReq}>
+                        <div
+                          className={`timeline-marker ${
+                            isCurrent
+                              ? "bg-primary border-4 border-white" // current -> special highlight
+                              : isAchieved
+                              ? "bg-primary"
+                              : "bg-muted/50"
+                          }`}
+                        >
+                          {isAchieved && !isCurrent && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className="timeline-content">
+                          <h3
+                            className={`timeline-title ${
+                              !isAchieved ? "text-muted-foreground" : ""
+                            } ${isCurrent ? "font-bold text-primary" : ""}`}
+                          >
+                            {item.title}
+                          </h3>
+                          <p className="timeline-subtitle">{item.subtitle}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

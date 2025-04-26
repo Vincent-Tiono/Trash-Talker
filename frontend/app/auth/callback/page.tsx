@@ -21,14 +21,12 @@ export default function Callback() {
       const user = session.user;
       const region = await getCityFromBrowser();
 
-      console.log("User region:", region);
-      console.log("User data:", user);
-
+      // get existing user with email from user table
       const { data: existingUser } = await supabase
         .from("user")
-        .select("id")
+        .select("*")
         .eq("email", user.email)
-        .maybeSingle();
+        .single();
 
       // get top 10 max or less users from user table that region is same as user region
       // sort by level first then by exp
@@ -61,8 +59,8 @@ export default function Callback() {
         email: user.email,
         image: user.user_metadata.avatar_url,
         region,
-        exp: 0,
-        level: 1,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
         total_disposal: 0,
         topUsersRegion: topUsersRegion || [],
         topUsersGlobal: topUsersGlobal || [],
