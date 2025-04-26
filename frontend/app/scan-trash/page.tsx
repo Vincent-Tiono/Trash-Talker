@@ -10,16 +10,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Camera, RefreshCw, Check, X, Leaf } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useContext } from "react";
 import { Navbar } from "@/components/navbar";
+import { supabase } from "@/components/supabase";
+import { UserContext } from "@/hooks/UserContext";
 
 export default function ScanTrashPage() {
+  const { user, setUser } = useContext(UserContext);
+
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<null | {
-    name: string;
-    type: string;
-    recyclable: boolean;
+    category: string;
+    sub_category: string;
+    recyclable?: boolean;
     xpEarned: number;
   }>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -74,10 +78,15 @@ export default function ScanTrashPage() {
           canvasRef.current.height
         );
 
-        const imageDataUrl = canvasRef.current.toDataURL("image/png");
-        setCapturedImage(imageDataUrl);
+        // Compress the image (optional: change the scale or quality)
+        const compressedImage = canvasRef.current.toDataURL("image/jpeg", 0.7); // 0.7 is the quality (70%)
+
+        console.log(compressedImage);
+
+        // Set the compressed image and initiate analysis
+        setCapturedImage(compressedImage);
         setIsCapturing(false);
-        analyzeImage(imageDataUrl);
+        analyzeImage(compressedImage);
       }
     }
   };
@@ -85,42 +94,32 @@ export default function ScanTrashPage() {
   const analyzeImage = (imageUrl: string) => {
     setIsAnalyzing(true);
 
-    // Simulate API call to AWS Bedrock for image analysis
-    setTimeout(() => {
-      // Mock result - in a real app, this would come from AWS Bedrock
-      const mockResults = [
+    const scanTrash = async () => {
+      const response = await fetch(
+        "https://2e0b-60-250-102-193.ngrok-free.app/trash/scan_trash",
         {
-          name: "Plastic Bottle",
-          type: "Plastic",
-          recyclable: true,
-          xpEarned: 50,
-        },
-        {
-          name: "Banana Peel",
-          type: "Organic",
-          recyclable: true,
-          xpEarned: 30,
-        },
-        {
-          name: "Styrofoam Cup",
-          type: "Polystyrene",
-          recyclable: false,
-          xpEarned: 20,
-        },
-        {
-          name: "Cardboard Box",
-          type: "Paper",
-          recyclable: true,
-          xpEarned: 40,
-        },
-      ];
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ access_token: "", image_base64: imageUrl }),
+        }
+      );
 
-      // Select a random result
-      const randomResult =
-        mockResults[Math.floor(Math.random() * mockResults.length)];
-      setResult(randomResult);
+      const data = await response.json();
+      console.log("Scan result:", data);
+
+      if (!response.ok) {
+        console.error("Error analyzing image:", data);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      setResult(data);
       setIsAnalyzing(false);
-    }, 2000);
+    };
+
+    scanTrash();
   };
 
   const resetScan = () => {
@@ -196,35 +195,45 @@ export default function ScanTrashPage() {
                 <div className="scan-result">
                   <div
                     className={`scan-result-icon ${
-                      result.recyclable
+                      result.category === "recyclable"
                         ? "scan-result-recyclable"
-                        : "scan-result-non-recyclable"
+                        : result.category === "general waste"
+                        ? "scan-result-general-waste"
+                        : "scan-result-organic"
                     }`}
                   >
-                    {result.recyclable ? (
+                    {result.category === "recyclable" ? (
                       <Check className="h-8 w-8" />
-                    ) : (
+                    ) : result.category === "general waste" ? (
                       <X className="h-8 w-8" />
+                    ) : (
+                      <Leaf className="h-8 w-8" />
                     )}
                   </div>
 
-                  <h3 className="text-2xl font-bold mb-1">{result.name}</h3>
-                  <p className="text-lg mb-4">{result.type}</p>
+                  <h3 className="text-2xl font-bold mb-1">
+                    {result.sub_category}
+                  </h3>
+                  <p className="text-lg mb-4">{result.category}</p>
 
                   <div className="scan-result-message">
-                    {result.recyclable
+                    {result.category === "recyclable"
                       ? "♻️ This item is recyclable!"
-                      : "❌ This item is NOT recyclable"}
+                      : result.category === "general waste"
+                      ? "❌ This item is general waste"
+                      : "🌱 This item is organic"}
                   </div>
 
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-2">
-                      {result.recyclable
+                      {result.category === "recyclable"
                         ? "Place this item in the recycling bin"
-                        : "This should go in general waste"}
+                        : result.category === "general waste"
+                        ? "This should go in general waste"
+                        : "This should go in the organic waste bin"}
                     </p>
                     <p className="text-primary font-bold">
-                      +{result.xpEarned} XP earned!
+                      +{result.xpEarned} 100 EXP earned!
                     </p>
                   </div>
                 </div>
