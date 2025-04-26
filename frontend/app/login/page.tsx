@@ -13,6 +13,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { supabase } from "../../components/supabase";
+import { use, useEffect } from "react";
 
 export default function LoginPage() {
   const { theme } = useTheme();
@@ -28,6 +29,19 @@ export default function LoginPage() {
       },
     });
   };
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        window.location.href = "/auth/callback";
+      }
+    };
+
+    checkSession();
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 hero-pattern relative">

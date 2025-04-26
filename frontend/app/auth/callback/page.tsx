@@ -7,7 +7,7 @@ import { UserContext, User, Disposal } from "../../../hooks/UserContext";
 
 export default function Callback() {
   const router = useRouter();
-  const { user, setUser } = useContext(UserContext);
+  const { setUser } = useContext(UserContext);
 
   useEffect(() => {
     const initUser = async () => {
@@ -61,7 +61,7 @@ export default function Callback() {
         region,
         exp: existingUser?.exp || 0,
         level: existingUser?.level || 1,
-        total_disposal: 0,
+        total_disposal: existingUser?.total_disposal || 0,
         topUsersRegion: topUsersRegion || [],
         topUsersGlobal: topUsersGlobal || [],
 

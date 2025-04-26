@@ -24,13 +24,24 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { ThemeSwitch } from "./theme-switch";
+import { supabase } from "./supabase";
 
 export function Navbar() {
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
   const pathname = usePathname();
 
   const isActive = (path: string) => {
     return pathname === path;
+  };
+
+  const logoutHandler = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Error logging out:", error.message);
+    } else {
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -127,7 +138,11 @@ export function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/" className="cursor-pointer text-destructive">
+                <Link
+                  href="/login"
+                  onClick={logoutHandler}
+                  className="cursor-pointer text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log Out</span>
                 </Link>

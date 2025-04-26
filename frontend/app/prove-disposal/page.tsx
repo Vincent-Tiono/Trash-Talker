@@ -14,8 +14,7 @@ import { Upload, ImageIcon, RefreshCw, Check, X, Leaf } from "lucide-react";
 import { useState, useRef } from "react";
 import { Navbar } from "@/components/navbar";
 import { supabase } from "@/components/supabase";
-import { UserContext } from "@/hooks/UserContext";
-import { set } from "react-hook-form";
+import { User, UserContext } from "@/hooks/UserContext";
 
 export default function ProveDisposalPage() {
   const { user, setUser } = useContext(UserContext);
@@ -165,6 +164,17 @@ export default function ProveDisposalPage() {
         message: "Your disposal is verified",
         xpEarned: 100,
       });
+
+      // update user context
+      const newUserData: User = {
+        ...user!,
+        exp: user!.exp + data.xpEarned,
+        level: user!.level,
+        total_disposal: user!.total_disposal + 1,
+      };
+
+      setUser(newUserData);
+
       setIsAnalyzing(false);
     };
 

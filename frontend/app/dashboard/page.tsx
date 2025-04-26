@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { JSX, ReactNode, useState, useContext } from "react";
+import { JSX, ReactNode, useContext } from "react";
 import { Navbar } from "@/components/navbar";
 import { UserContext } from "@/hooks/UserContext";
 
@@ -127,8 +127,8 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center text-center mb-6">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-4 border-teal-700">
+                  <div className="relative mb-4">
+                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-teal-700">
                       <Image
                         src={userImage}
                         alt="User Image"
@@ -137,7 +137,7 @@ export default function Dashboard() {
                         className="rounded-full object-cover"
                       />
                     </div>
-                    <div className="absolute -bottom-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-background">
+                    <div className="absolute bottom-0 right-0 bg-primary text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-background">
                       {level}
                     </div>
                   </div>
@@ -171,7 +171,7 @@ export default function Dashboard() {
                       <p className="dashboard-stat-value font-fredoka">
                         {totalDisposal}
                       </p>
-                      <p className="dashboard-stat-label">Items Recycled</p>
+                      <p className="dashboard-stat-label">Total Disposal</p>
                     </div>
                     <div className="dashboard-stat">
                       <p className="dashboard-stat-value font-fredoka">{exp}</p>
@@ -230,7 +230,7 @@ export default function Dashboard() {
                             {user.name}
                           </p>
                           <p className="leaderboard-user-stats text-xs text-muted-foreground truncate">
-                            Level {user.level} - {user.exp} EXP
+                            Level {user.level} ({user.exp} EXP)
                           </p>
                         </div>
                       </div>
