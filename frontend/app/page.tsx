@@ -88,7 +88,7 @@ export default function Home() {
                 Gamified
               </div>
               <h1 className="font-fredoka text-4xl md:text-6xl font-bold tracking-tight">
-                Save Environemnt,{" "}
+                Save Environment,{" "}
                 <span className="bg-gradient-to-r from-green-400 to-teal-800 bg-clip-text text-transparent">
                   Recycle Smarter.
                 </span>
