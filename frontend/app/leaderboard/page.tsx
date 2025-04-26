@@ -9,12 +9,79 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Medal, Award, User as UserIcon, Leaf } from "lucide-react";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { UserContext, User } from "@/hooks/UserContext";
+import { UserContext, User, Disposal } from "@/hooks/UserContext";
+import { supabase } from "@/components/supabase";
+import { useRouter } from "next/navigation";
+import { getCityFromBrowser } from "../auth/callback/page";
 
 export default function LeaderboardPage() {
-  const { user } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
+  const router = useRouter();
+
+  useEffect(() => {
+    const initUser = async () => {
+      if (user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const userSession = session.user;
+      const region = await getCityFromBrowser();
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("*")
+        .eq("email", userSession.email)
+        .single();
+
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .ilike("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", userSession.id);
+
+      const userData = {
+        id: userSession.id,
+        name: userSession.user_metadata.name,
+        email: userSession.email,
+        image: userSession.user_metadata.avatar_url,
+        region,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
+        total_disposal: existingUser?.total_disposal || 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+        disposals: (disposals as Disposal[]) || [],
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+    };
+
+    initUser();
+  }, []);
 
   const topUsersRegion: User[] = user?.topUsersRegion || [];
   const topUsersGlobal: User[] = user?.topUsersGlobal || [];
@@ -217,4 +284,7 @@ export default function LeaderboardPage() {
       </div>
     </>
   );
+}
+function setUser(arg0: User) {
+  throw new Error("Function not implemented.");
 }

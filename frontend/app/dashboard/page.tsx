@@ -23,12 +23,79 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { JSX, ReactNode, useContext } from "react";
+import { JSX, ReactNode, useContext, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { UserContext } from "@/hooks/UserContext";
+import { Disposal, User, UserContext } from "@/hooks/UserContext";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/components/supabase";
+import { getCityFromBrowser } from "../auth/callback/page";
 
 export default function Dashboard() {
-  const { user } = useContext(UserContext);
+  const router = useRouter();
+  const { user, setUser } = useContext(UserContext);
+
+  useEffect(() => {
+    const initUser = async () => {
+      if (user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const userSession = session.user;
+      const region = await getCityFromBrowser();
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("*")
+        .eq("email", userSession.email)
+        .single();
+
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .ilike("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", userSession.id);
+
+      const userData = {
+        id: userSession.id,
+        name: userSession.user_metadata.name,
+        email: userSession.email,
+        image: userSession.user_metadata.avatar_url,
+        region,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
+        total_disposal: existingUser?.total_disposal || 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+        disposals: (disposals as Disposal[]) || [],
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+    };
+
+    initUser();
+  }, []);
 
   console.log("User data:", user);
 
@@ -148,7 +215,7 @@ export default function Dashboard() {
                     {userEmail}
                   </h3>
                   <p className="text-muted-foreground">
-                    Level {level} • {badge}
+                    Level {level} ({badge})
                   </p>
                 </div>
 
@@ -337,7 +404,42 @@ export default function Dashboard() {
                           </div>
                           <div className="activity-footer">
                             <p>{activity.category}</p>
-                            <p>{activity.datetime}</p>
+                            <p className="activity-date">
+                              {(() => {
+                                const now = new Date();
+                                const date = new Date(activity.datetime);
+
+                                const isToday =
+                                  now.toDateString() === date.toDateString();
+                                const yesterday = new Date();
+                                yesterday.setDate(now.getDate() - 1);
+                                const isYesterday =
+                                  yesterday.toDateString() ===
+                                  date.toDateString();
+
+                                const timeString = date.toLocaleTimeString(
+                                  "en-US",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false, // if you prefer 24h format; remove if want AM/PM
+                                  }
+                                );
+
+                                if (isToday) return `Today, ${timeString}`;
+                                if (isYesterday)
+                                  return `Yesterday, ${timeString}`;
+
+                                return date.toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                });
+                              })()}
+                            </p>
                           </div>
                         </div>
                       </div>

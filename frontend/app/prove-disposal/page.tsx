@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,10 +14,76 @@ import { Upload, ImageIcon, RefreshCw, Check, X, Leaf } from "lucide-react";
 import { useState, useRef } from "react";
 import { Navbar } from "@/components/navbar";
 import { supabase } from "@/components/supabase";
-import { User, UserContext } from "@/hooks/UserContext";
+import { Disposal, User, UserContext } from "@/hooks/UserContext";
+import { getCityFromBrowser } from "../auth/callback/page";
+import { useRouter } from "next/navigation";
 
 export default function ProveDisposalPage() {
   const { user, setUser } = useContext(UserContext);
+  const router = useRouter();
+
+  useEffect(() => {
+    const initUser = async () => {
+      if (user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const userSession = session.user;
+      const region = await getCityFromBrowser();
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("*")
+        .eq("email", userSession.email)
+        .single();
+
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .ilike("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", userSession.id);
+
+      const userData = {
+        id: userSession.id,
+        name: userSession.user_metadata.name,
+        email: userSession.email,
+        image: userSession.user_metadata.avatar_url,
+        region,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
+        total_disposal: existingUser?.total_disposal || 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+        disposals: (disposals as Disposal[]) || [],
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+    };
+
+    initUser();
+  }, []);
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -100,6 +166,8 @@ export default function ProveDisposalPage() {
       });
 
       // update user Supabase exp and check level and total_disposal
+      let newLevel;
+      let newExp;
       if (user) {
         const { data: userData } = await supabase
           .from("user")
@@ -168,8 +236,8 @@ export default function ProveDisposalPage() {
       // update user context
       const newUserData: User = {
         ...user!,
-        exp: user!.exp + data.xpEarned,
-        level: user!.level,
+        exp: newExp!,
+        level: newLevel!,
         total_disposal: user!.total_disposal + 1,
       };
 
@@ -192,7 +260,7 @@ export default function ProveDisposalPage() {
   return (
     <>
       <Navbar />
-      <div className="container mx-auto py-8 px-4 max-w-md relative">
+      <div className="container mx-auto py-8 px-4 max-w-xl relative">
         <div className="leaf leaf-2">
           <Leaf className="h-10 w-10 text-primary/30 animate-float" />
         </div>

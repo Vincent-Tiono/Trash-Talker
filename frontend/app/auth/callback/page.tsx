@@ -4,10 +4,13 @@ import { useEffect, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../components/supabase";
 import { UserContext, User, Disposal } from "../../../hooks/UserContext";
+import { ClimbingBoxLoader } from "react-spinners";
+import { useTheme } from "next-themes";
 
 export default function Callback() {
   const router = useRouter();
   const { setUser } = useContext(UserContext);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const initUser = async () => {
@@ -21,15 +24,12 @@ export default function Callback() {
       const user = session.user;
       const region = await getCityFromBrowser();
 
-      // get existing user with email from user table
       const { data: existingUser } = await supabase
         .from("user")
         .select("*")
         .eq("email", user.email)
         .single();
 
-      // get top 10 max or less users from user table that region is same as user region
-      // sort by level first then by exp
       const { data: topUsersRegion } = await supabase
         .from("user")
         .select("*")
@@ -38,8 +38,6 @@ export default function Callback() {
         .order("exp", { ascending: false })
         .limit(10);
 
-      // get top 10 max or less users from user table global
-      // sort by level first then by exp
       const { data: topUsersGlobal } = await supabase
         .from("user")
         .select("*")
@@ -47,7 +45,6 @@ export default function Callback() {
         .order("exp", { ascending: false })
         .limit(10);
 
-      // get all from disposal table where user_id is same as user.id
       const { data: disposals } = await supabase
         .from("disposal")
         .select("*")
@@ -64,7 +61,6 @@ export default function Callback() {
         total_disposal: existingUser?.total_disposal || 0,
         topUsersRegion: topUsersRegion || [],
         topUsersGlobal: topUsersGlobal || [],
-
         disposals: (disposals as Disposal[]) || [],
       };
 
@@ -80,10 +76,18 @@ export default function Callback() {
     initUser();
   }, []);
 
-  return <p>Authenticating...</p>;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center">
+      <ClimbingBoxLoader
+        size={22}
+        speedMultiplier={1.5}
+        color={theme === "dark" ? "#ffffff" : "#000000"}
+      />
+    </div>
+  );
 }
 
-async function getCityFromBrowser(): Promise<string> {
+export async function getCityFromBrowser(): Promise<string> {
   try {
     const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
       navigator.geolocation.getCurrentPosition(resolve, reject)
