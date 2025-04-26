@@ -17,7 +17,10 @@ A frontend UI for Trash-Talker application.
    ```
 3. Install dependencies:
    ```bash
-   npm install
+   npm install -g pnpm
+   ```
+   ```bash
+   pnpm install
    ```
 
 ### Running the Application
