@@ -42,16 +42,24 @@ export default function Dashboard() {
 
   const nextLevelExp = 100 * level;
   let badge = "";
+  let nextBadge = "";
+  let nextBadgeLevel = 0;
   if (level < 5) {
-    badge = "Real Trash";
-  } else if (level < 10) {
     badge = "Trash Trainee";
-  } else if (level < 15) {
+    nextBadge = "Bin Boss";
+    nextBadgeLevel = 5;
+  } else if (level < 10) {
     badge = "Bin Boss";
-  } else if (level < 20) {
+    nextBadge = "Garbage Guru";
+    nextBadgeLevel = 10;
+  } else if (level < 15) {
     badge = "Garbage Guru";
+    nextBadge = "Lord of the Litter";
+    nextBadgeLevel = 15;
   } else {
     badge = "Lord of the Litter";
+    nextBadge = "Recycling Champion";
+    nextBadgeLevel = 20;
   }
   const topUsersRegion = user?.topUsersRegion || [];
 
@@ -174,9 +182,9 @@ export default function Dashboard() {
                         <Award className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Garbage Guru</p>
+                        <p className="font-medium">{nextBadge}</p>
                         <p className="text-xs text-muted-foreground">
-                          Reach Level 10
+                          Reach Level {nextBadgeLevel} to unlock
                         </p>
                       </div>
                     </div>
@@ -375,7 +383,7 @@ export default function Dashboard() {
                     {
                       levelReq: 10,
                       title: "🚮 Bin Boss",
-                      subtitle: "Level 10 • Current Level",
+                      subtitle: "Level 10 • Master of the bins",
                     },
                     {
                       levelReq: 15,
@@ -398,7 +406,7 @@ export default function Dashboard() {
                         <div
                           className={`timeline-marker ${
                             isCurrent
-                              ? "bg-primary border-4 border-white" // current -> special highlight
+                              ? "bg-primary border-2 border-teal-100" // current -> special highlight
                               : isAchieved
                               ? "bg-primary"
                               : "bg-muted/50"
