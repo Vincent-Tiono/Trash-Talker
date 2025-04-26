@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+python-jose[cryptography]
+requests
+langchain
+boto3
+pytest
+pydantic_settings
+langchain_community
+python-multipart
