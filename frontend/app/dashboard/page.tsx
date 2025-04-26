@@ -226,7 +226,7 @@ export default function Dashboard() {
                       Use your camera to identify waste and learn how to dispose
                       of it properly
                     </p>
-                    <Button className="w-full group-hover:bg-primary/90 transition-colors">
+                    <Button className="w-full group-hover:bg-primary/90 transition-colors mx-auto flex justify-center">
                       Start Scanning{" "}
                       <ChevronRight className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Button>
@@ -248,7 +248,7 @@ export default function Dashboard() {
                       Submit proof of proper disposal to earn XP and level up
                       your recycling game
                     </p>
-                    <Button className="w-full group-hover:bg-primary/90 transition-colors">
+                    <Button className="w-full group-hover:bg-primary/90 transition-colors mx-auto flex justify-center">
                       Upload Proof{" "}
                       <ChevronRight className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Button>
