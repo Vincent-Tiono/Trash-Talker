@@ -1,0 +1,452 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 142 76% 96%;
+    --secondary-foreground: 142 76% 36%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 142 76% 96%;
+    --accent-foreground: 142 76% 36%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142 76% 36%;
+    --radius: 1.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 142 30% 20%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 142 30% 20%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142 76% 36%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-fredoka;
+  }
+}
+
+/* Decorative patterns */
+.eco-pattern {
+  background-color: var(--background);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2322c55e' fill-opacity='0.05'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.dark .eco-pattern {
+  background-color: hsl(222.2 84% 4.9%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2322c55e' fill-opacity='0.1'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.leaf-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M54.627 12.306c-2.994-4.856-8.308-8.233-14.025-8.233-5.718 0-11.031 3.377-14.025 8.233C23.583 7.45 18.27 4.073 12.552 4.073S1.521 7.45-1.473 12.306c-2.994 4.856-2.994 10.611 0 15.467 2.994 4.856 8.308 8.233 14.025 8.233 5.718 0 11.031-3.377 14.025-8.233 2.994 4.856 8.308 8.233 14.025 8.233 5.718 0 11.031-3.377 14.025-8.233 2.994-4.856 2.994-10.611 0-15.467z' fill='%2322c55e' fill-opacity='0.05'/%3E%3C/svg%3E");
+}
+
+.dark .leaf-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M54.627 12.306c-2.994-4.856-8.308-8.233-14.025-8.233-5.718 0-11.031 3.377-14.025 8.233C23.583 7.45 18.27 4.073 12.552 4.073S1.521 7.45-1.473 12.306c-2.994 4.856-2.994 10.611 0 15.467 2.994 4.856 8.308 8.233 14.025 8.233 5.718 0 11.031-3.377 14.025-8.233 2.994 4.856 8.308 8.233 14.025 8.233 5.718 0 11.031-3.377 14.025-8.233 2.994-4.856 2.994-10.611 0-15.467z' fill='%2322c55e' fill-opacity='0.1'/%3E%3C/svg%3E");
+}
+
+/* Gradient backgrounds */
+.gradient-green {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(160, 84%, 39%));
+}
+
+.dark-gradient-green {
+  background: linear-gradient(135deg, hsl(142, 30%, 20%), hsl(160, 30%, 20%));
+}
+
+/* Decorative elements */
+.leaf {
+  position: absolute;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.leaf-1 {
+  top: 10%;
+  left: 5%;
+  transform: rotate(15deg);
+}
+
+.leaf-2 {
+  top: 30%;
+  right: 5%;
+  transform: rotate(-20deg);
+}
+
+.leaf-3 {
+  bottom: 20%;
+  left: 10%;
+  transform: rotate(30deg);
+}
+
+.leaf-4 {
+  bottom: 30%;
+  right: 10%;
+  transform: rotate(-10deg);
+}
+
+/* Typography */
+.eco-heading {
+  @apply font-fredoka;
+  color: hsl(var(--foreground));
+  text-shadow: 3px 3px 0px rgba(34, 197, 94, 0.2);
+  letter-spacing: -0.02em;
+}
+
+.eco-heading-gradient {
+  @apply font-fredoka;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(160, 84%, 39%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  text-shadow: none;
+}
+
+/* Cards and UI elements */
+.eco-card {
+  @apply rounded-2xl border-2 bg-card shadow-sm transition-all hover:shadow-md overflow-hidden;
+  border-color: rgba(34, 197, 94, 0.1);
+}
+
+.eco-card-hover {
+  @apply rounded-2xl border-2 bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-md overflow-hidden;
+  border-color: rgba(34, 197, 94, 0.1);
+}
+
+.eco-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(160, 84%, 39%));
+}
+
+.eco-button {
+  @apply rounded-full bg-primary text-primary-foreground font-medium transition-all hover:bg-primary/90 hover:shadow-md hover:-translate-y-0.5;
+}
+
+.eco-button-outline {
+  @apply rounded-full bg-transparent text-primary border-2 border-primary font-medium transition-all hover:bg-primary/10;
+}
+
+.eco-icon-bg {
+  @apply rounded-full bg-primary/10 p-3 text-primary;
+}
+
+/* Animations */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce 3s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Theme toggle */
+.theme-toggle {
+  @apply relative h-6 w-12 rounded-full bg-muted p-1 transition-colors;
+}
+
+.theme-toggle[data-state="checked"] {
+  @apply bg-primary;
+}
+
+.theme-toggle-thumb {
+  @apply block h-4 w-4 rounded-full bg-white transition-transform;
+}
+
+.theme-toggle[data-state="checked"] .theme-toggle-thumb {
+  transform: translateX(100%);
+}
+
+/* Dashboard elements */
+.dashboard-card {
+  @apply eco-card p-6;
+}
+
+.dashboard-stat {
+  @apply rounded-lg bg-muted p-3 text-center;
+}
+
+.dashboard-stat-value {
+  @apply text-2xl font-bold;
+}
+
+.dashboard-stat-label {
+  @apply text-xs text-muted-foreground;
+}
+
+.progress-label {
+  @apply mb-1 flex justify-between text-xs font-medium;
+}
+
+.activity-item {
+  @apply flex items-center gap-4 rounded-lg border p-3;
+}
+
+.activity-icon {
+  @apply flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary;
+}
+
+.activity-content {
+  @apply flex-1;
+}
+
+.activity-header {
+  @apply flex justify-between;
+}
+
+.activity-title {
+  @apply font-medium;
+}
+
+.activity-points {
+  @apply text-sm font-medium text-primary;
+}
+
+.activity-footer {
+  @apply flex justify-between text-xs text-muted-foreground;
+}
+
+/* Camera and scanning */
+.camera-button {
+  @apply absolute bottom-4 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-teal-700 shadow-lg transition-transform hover:scale-105;
+}
+
+.camera-button-inner {
+  @apply h-10 w-10 rounded-full border-2 border-white;
+}
+
+.scan-result {
+  @apply absolute inset-0 flex flex-col items-center justify-center bg-background/95 p-6 backdrop-blur-sm;
+}
+
+.scan-result-icon {
+  @apply mb-4 flex h-16 w-16 items-center justify-center rounded-full;
+}
+
+.scan-result-recyclable {
+  @apply bg-green-100 text-green-600;
+}
+
+.scan-result-non-recyclable {
+  @apply bg-red-100 text-red-600;
+}
+
+.scan-result-message {
+  @apply mb-4 w-full rounded-lg bg-muted p-4 text-center font-medium;
+}
+
+/* Leaderboard */
+.leaderboard-item {
+  @apply flex items-center gap-4 rounded-lg border p-4;
+}
+
+.leaderboard-rank {
+  @apply flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-bold;
+}
+
+.leaderboard-user {
+  @apply flex-1;
+}
+
+.leaderboard-user-name {
+  @apply flex items-center font-bold;
+}
+
+.leaderboard-user-stats {
+  @apply flex justify-between text-xs text-muted-foreground;
+}
+
+.leaderboard-user-level {
+  @apply flex items-center gap-1 font-medium;
+}
+
+/* Timeline */
+.timeline-item {
+  @apply relative pl-10 pb-8;
+}
+
+.timeline-marker {
+  @apply absolute left-0 flex h-8 w-8 items-center justify-center rounded-full;
+}
+
+.timeline-marker-inner {
+  @apply h-4 w-4 rounded-full;
+}
+
+.timeline-content {
+  @apply space-y-1;
+}
+
+.timeline-title {
+  @apply text-lg font-bold;
+}
+
+.timeline-subtitle {
+  @apply text-sm text-muted-foreground;
+}
+
+/* Feature cards */
+.feature-card {
+  @apply relative overflow-hidden rounded-xl border bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md;
+}
+
+.feature-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, hsl(var(--primary)), hsl(160, 84%, 39%));
+}
+
+.feature-icon {
+  @apply mb-5 rounded-full bg-primary/10 p-3 text-primary;
+}
+
+/* Stats */
+.stats-item {
+  @apply flex flex-col items-center justify-center p-4 text-center;
+}
+
+.stats-value {
+  @apply text-3xl font-bold text-primary;
+}
+
+.stats-label {
+  @apply text-sm text-muted-foreground;
+}
+
+/* Badge */
+.badge-circle {
+  @apply flex h-24 w-24 items-center justify-center rounded-full border-4 border-background shadow-lg;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(160, 84%, 39%));
+}
+
+/* Decorative shapes */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  z-index: -1;
+  opacity: 0.4;
+}
+
+.blob-1 {
+  width: 300px;
+  height: 300px;
+  background-color: rgba(34, 197, 94, 0.2);
+  top: 10%;
+  left: -100px;
+}
+
+.blob-2 {
+  width: 250px;
+  height: 250px;
+  background-color: rgba(34, 197, 94, 0.15);
+  bottom: 10%;
+  right: -50px;
+}
+
+.blob-3 {
+  width: 200px;
+  height: 200px;
+  background-color: rgba(34, 197, 94, 0.1);
+  top: 40%;
+  right: 10%;
+}
+
+/* Decorative patterns */
+.dots-pattern {
+  background-image: radial-gradient(
+    rgba(34, 197, 94, 0.1) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
+
+.dark .dots-pattern {
+  background-image: radial-gradient(
+    rgba(34, 197, 94, 0.2) 1px,
+    transparent 1px
+  );
+}
