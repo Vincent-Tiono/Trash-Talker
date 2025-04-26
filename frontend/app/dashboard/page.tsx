@@ -45,20 +45,24 @@ export default function Dashboard() {
   let nextBadge = "";
   let nextBadgeLevel = 0;
   if (level < 5) {
-    badge = "Trash Trainee";
-    nextBadge = "Bin Boss";
+    badge = "Real Trash";
+    nextBadge = "Trash Trainee";
     nextBadgeLevel = 5;
   } else if (level < 10) {
-    badge = "Bin Boss";
-    nextBadge = "Garbage Guru";
+    badge = "Trash Trainee";
+    nextBadge = "Bin Boss";
     nextBadgeLevel = 10;
   } else if (level < 15) {
+    badge = "Bin Boss";
+    nextBadge = "Garbage Guru";
+    nextBadgeLevel = 15;
+  } else if (level < 20) {
     badge = "Garbage Guru";
     nextBadge = "Lord of the Litter";
-    nextBadgeLevel = 15;
+    nextBadgeLevel = 20;
   } else {
     badge = "Lord of the Litter";
-    nextBadge = "Recycling Champion";
+    nextBadge = "Maxed Out!";
     nextBadgeLevel = 20;
   }
   const topUsersRegion = user?.topUsersRegion || [];
@@ -329,7 +333,7 @@ export default function Dashboard() {
                             <p className="activity-title">
                               {activity.sub_category}
                             </p>
-                            <p className="activity-points">+10 EXP</p>
+                            <p className="activity-points">+100 EXP</p>
                           </div>
                           <div className="activity-footer">
                             <p>{activity.category}</p>

@@ -27,67 +27,57 @@ export default function ScanTrashPage() {
     xpEarned: number;
   }>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const imgRef = useRef<HTMLImageElement>(null);
+  const streamUrl = "http://192.168.0.100:5000/fe/mjpeg_stream?";
 
   useEffect(() => {
-    if (isCapturing) {
-      startCamera();
-    } else {
-      stopCamera();
+    if (!isCapturing) {
+      pauseCamera();
     }
-
     return () => {
-      stopCamera();
+      playCamera();
     };
-  }, [isCapturing]);
+  }, []);
 
-  const startCamera = async () => {
+  const playCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      await fetch("http://192.168.0.100:5000/camera/play", { method: "POST" });
+      setIsPaused(false);
     } catch (err) {
-      console.error("Error accessing camera:", err);
+      console.error("Error playing camera:", err);
     }
   };
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
+  const pauseCamera = async () => {
+    try {
+      await fetch("http://192.168.0.100:5000/camera/pause", { method: "POST" });
+      setIsPaused(true);
+    } catch (err) {
+      console.error("Error pausing camera:", err);
     }
   };
 
-  const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext("2d");
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(
-          videoRef.current,
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
-
-        // Compress the image (optional: change the scale or quality)
-        const compressedImage = canvasRef.current.toDataURL("image/jpeg", 0.7); // 0.7 is the quality (70%)
-
-        console.log(compressedImage);
-
-        // Set the compressed image and initiate analysis
-        setCapturedImage(compressedImage);
-        setIsCapturing(false);
-        analyzeImage(compressedImage);
+  const captureImage = async () => {
+    try {
+      await pauseCamera();
+      if (imgRef.current) {
+        const img = imgRef.current;
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const imageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          setCapturedImage(imageBase64);
+          analyzeImage(imageBase64);
+        }
       }
+      setIsCapturing(false);
+    } catch (err) {
+      console.error("Error capturing image:", err);
     }
   };
 
@@ -126,6 +116,7 @@ export default function ScanTrashPage() {
     setCapturedImage(null);
     setResult(null);
     setIsCapturing(true);
+    playCamera();
   };
 
   return (
@@ -155,10 +146,10 @@ export default function ScanTrashPage() {
             <div className="relative aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
               {isCapturing ? (
                 <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
+                  <img
+                    ref={imgRef}
+                    src={streamUrl}
+                    alt="Camera Stream"
                     className="w-full h-full object-cover"
                   />
                   <button className="camera-button" onClick={captureImage}>
@@ -233,13 +224,12 @@ export default function ScanTrashPage() {
                         : "This should go in the organic waste bin"}
                     </p>
                     <p className="text-primary font-bold">
-                      +{result.xpEarned} 100 EXP earned!
+                      Remember to recycle responsibly!
                     </p>
                   </div>
                 </div>
               )}
             </div>
-            <canvas ref={canvasRef} className="hidden" />
           </CardContent>
           <CardFooter className="flex gap-2 p-4">
             {!isCapturing ? (
@@ -247,7 +237,10 @@ export default function ScanTrashPage() {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => setIsCapturing(true)}
+                  onClick={() => {
+                    setIsCapturing(true);
+                    playCamera();
+                  }}
                 >
                   {capturedImage ? "Retake" : "Start Camera"}
                 </Button>
@@ -261,7 +254,10 @@ export default function ScanTrashPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setIsCapturing(false)}
+                onClick={() => {
+                  setIsCapturing(false);
+                  pauseCamera();
+                }}
               >
                 Cancel
               </Button>
