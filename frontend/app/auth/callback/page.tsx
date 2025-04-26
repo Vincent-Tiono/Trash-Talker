@@ -33,7 +33,7 @@ export default function Callback() {
       const { data: topUsersRegion } = await supabase
         .from("user")
         .select("*")
-        .eq("region", region)
+        .ilike("region", region)
         .order("level", { ascending: false })
         .order("exp", { ascending: false })
         .limit(10);
