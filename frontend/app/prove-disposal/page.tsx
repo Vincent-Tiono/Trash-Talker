@@ -99,7 +99,20 @@ export default function ProveDisposalPage() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setSelectedImage(event.target?.result as string);
+        // compress image to 70% quality
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+            setSelectedImage(compressedDataUrl);
+          }
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -113,57 +126,49 @@ export default function ProveDisposalPage() {
     setIsAnalyzing(true);
 
     const proveDisposal = async () => {
-      // const {
-      //   data: { session },
-      // } = await supabase.auth.getSession();
-      // const access_token = session?.access_token || "";
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const access_token = session?.access_token || "";
 
-      // const response = await fetch(
-      //   "https://2e0b-60-250-102-193.ngrok-free.app/trash/prove_disposal",
-      //   {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({
-      //       access_token: access_token,
-      //       image_base64: selectedImage,
-      //     }),
-      //   }
-      // );
+      const response = await fetch(
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/trash/prove_disposal",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            access_token: access_token,
+            image_base64: selectedImage,
+          }),
+        }
+      );
 
-      // const data = await response.json();
-      // console.log("Scan result:", data);
+      const data = await response.json();
+      console.log("Scan result:", data);
 
-      // if (!response.ok) {
-      //   console.error("Error analyzing image:", data);
-      //   setIsAnalyzing(false);
-      //   return;
-      // }
+      if (!response.ok) {
+        console.error("Error analyzing image:", data);
+        setResult({
+          valid: false,
+          message: "Error analyzing image",
+          xpEarned: 0,
+        });
 
-      // if (!data.passed) {
-      //   setResult({
-      //     valid: false,
-      //     message: data.reason,
-      //     xpEarned: 0,
-      //   });
-      //   setIsAnalyzing(false);
-      //   return;
-      // }
+        setIsAnalyzing(false);
+        return;
+      }
 
-      const data = {
-        passed: true,
-        reason: "Your disposal is verified",
-        xpEarned: 100,
-        category: "plastic",
-        sub_category: "bottle",
-      };
-
-      setResult({
-        valid: false,
-        message: data.reason,
-        xpEarned: 0,
-      });
+      if (!data.passed) {
+        setResult({
+          valid: false,
+          message: data.reason,
+          xpEarned: 0,
+        });
+        setIsAnalyzing(false);
+        return;
+      }
 
       // update user Supabase exp and check level and total_disposal
       let newLevel;
@@ -179,7 +184,7 @@ export default function ProveDisposalPage() {
 
         if (userData) {
           const requiredExp = userData.level * 100;
-          const totalExp = userData.exp + data.xpEarned;
+          const totalExp = userData.exp + 100;
 
           let newLevel = userData.level;
           let newExp = totalExp;
@@ -229,7 +234,7 @@ export default function ProveDisposalPage() {
 
       setResult({
         valid: true,
-        message: "Your disposal is verified",
+        message: "Verified, " + data.reason,
         xpEarned: 100,
       });
 

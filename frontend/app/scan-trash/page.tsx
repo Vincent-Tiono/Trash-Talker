@@ -93,55 +93,45 @@ export default function ScanTrashPage() {
     xpEarned: number;
   }>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
 
   const imgRef = useRef<HTMLImageElement>(null);
-  const streamUrl = "http://192.168.0.100:5000/fe/mjpeg_stream?";
+  const streamUrl = "http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg";
 
-  useEffect(() => {
-    if (!isCapturing) {
-      pauseCamera();
-    }
-    return () => {
-      playCamera();
-    };
-  }, []);
-
-  const playCamera = async () => {
+  const captureImage = () => {
     try {
-      await fetch("http://192.168.0.100:5000/camera/play", { method: "POST" });
-      setIsPaused(false);
-    } catch (err) {
-      console.error("Error playing camera:", err);
-    }
-  };
-
-  const pauseCamera = async () => {
-    try {
-      await fetch("http://192.168.0.100:5000/camera/pause", { method: "POST" });
-      setIsPaused(true);
-    } catch (err) {
-      console.error("Error pausing camera:", err);
-    }
-  };
-
-  const captureImage = async () => {
-    try {
-      await pauseCamera();
       if (imgRef.current) {
         const img = imgRef.current;
+
+        // Temporarily remove the image source URL to freeze the current frame
+        const currentSrc = img.src;
+        img.src = ""; // This removes the MJPEG stream, freezing the frame
+
+        // Set anonymous image to avoid CORS issues
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
         const ctx = canvas.getContext("2d");
+
         if (ctx) {
+          // Draw the frozen frame onto the canvas
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const imageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+          // Convert canvas content to base64 (image/jpeg format)
+          const imageBase64 = canvas.toDataURL("image/jpeg");
+          console.log("Captured image base64:", imageBase64);
+
+          // Set the captured image to the base64 string
           setCapturedImage(imageBase64);
+
+          // Proceed to analyze the captured image
           analyzeImage(imageBase64);
         }
+
+        // Restore the original MJPEG stream URL to allow further captures
+        img.src = currentSrc;
+
+        setIsCapturing(false);
       }
-      setIsCapturing(false);
     } catch (err) {
       console.error("Error capturing image:", err);
     }
@@ -151,14 +141,19 @@ export default function ScanTrashPage() {
     setIsAnalyzing(true);
 
     const scanTrash = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const access_token = session?.access_token || "";
+
       const response = await fetch(
-        "https://2e0b-60-250-102-193.ngrok-free.app/trash/scan_trash",
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/trash/scan_trash",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ access_token: "", image_base64: imageUrl }),
+          body: JSON.stringify({ access_token, image_base64: imageUrl }),
         }
       );
 
@@ -182,7 +177,6 @@ export default function ScanTrashPage() {
     setCapturedImage(null);
     setResult(null);
     setIsCapturing(true);
-    playCamera();
   };
 
   return (
@@ -254,17 +248,13 @@ export default function ScanTrashPage() {
                     className={`scan-result-icon ${
                       result.category === "recyclable"
                         ? "scan-result-recyclable"
-                        : result.category === "general waste"
-                        ? "scan-result-general-waste"
-                        : "scan-result-organic"
+                        : "scan-result-non-recyclable"
                     }`}
                   >
                     {result.category === "recyclable" ? (
                       <Check className="h-8 w-8" />
-                    ) : result.category === "general waste" ? (
-                      <X className="h-8 w-8" />
                     ) : (
-                      <Leaf className="h-8 w-8" />
+                      <X className="h-8 w-8" />
                     )}
                   </div>
 
@@ -275,22 +265,18 @@ export default function ScanTrashPage() {
 
                   <div className="scan-result-message">
                     {result.category === "recyclable"
-                      ? "♻️ This item is recyclable!"
-                      : result.category === "general waste"
-                      ? "❌ This item is general waste"
-                      : "🌱 This item is organic"}
+                      ? "♻️ This item is recyclable."
+                      : "❌ This item is non-recyclable."}
                   </div>
 
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-2">
                       {result.category === "recyclable"
                         ? "Place this item in the recycling bin"
-                        : result.category === "general waste"
-                        ? "This should go in general waste"
-                        : "This should go in the organic waste bin"}
+                        : "This should go in the non-recyclable waste bin"}
                     </p>
                     <p className="text-primary font-bold">
-                      Remember to recycle responsibly!
+                      Remember to throw it in the right bin!
                     </p>
                   </div>
                 </div>
@@ -305,7 +291,6 @@ export default function ScanTrashPage() {
                   className="flex-1"
                   onClick={() => {
                     setIsCapturing(true);
-                    playCamera();
                   }}
                 >
                   {capturedImage ? "Retake" : "Start Camera"}
@@ -322,7 +307,6 @@ export default function ScanTrashPage() {
                 className="flex-1"
                 onClick={() => {
                   setIsCapturing(false);
-                  pauseCamera();
                 }}
               >
                 Cancel
