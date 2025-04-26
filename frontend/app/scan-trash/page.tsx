@@ -10,129 +10,185 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Camera, RefreshCw, Check, X, Leaf } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useContext } from "react";
 import { Navbar } from "@/components/navbar";
+import { supabase } from "@/components/supabase";
+import { Disposal, User, UserContext } from "@/hooks/UserContext";
+import { useRouter } from "next/navigation";
+import { getCityFromBrowser } from "../auth/callback/page";
 
 export default function ScanTrashPage() {
+  const { user, setUser } = useContext(UserContext);
+  const router = useRouter();
+
+  useEffect(() => {
+    const initUser = async () => {
+      if (user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const userSession = session.user;
+      const region = await getCityFromBrowser();
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("*")
+        .eq("email", userSession.email)
+        .single();
+
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .ilike("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", userSession.id);
+
+      const userData = {
+        id: userSession.id,
+        name: userSession.user_metadata.name,
+        email: userSession.email,
+        image: userSession.user_metadata.avatar_url,
+        region,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
+        total_disposal: existingUser?.total_disposal || 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+        disposals: (disposals as Disposal[]) || [],
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+    };
+
+    initUser();
+  }, []);
+
   const [isCapturing, setIsCapturing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<null | {
-    name: string;
-    type: string;
-    recyclable: boolean;
+    category: string;
+    sub_category: string;
+    recyclable?: boolean;
     xpEarned: number;
   }>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const imgRef = useRef<HTMLImageElement>(null);
+  const streamUrl = "http://192.168.0.100:5000/fe/mjpeg_stream?";
 
   useEffect(() => {
-    if (isCapturing) {
-      startCamera();
-    } else {
-      stopCamera();
+    if (!isCapturing) {
+      pauseCamera();
     }
-
     return () => {
-      stopCamera();
+      playCamera();
     };
-  }, [isCapturing]);
+  }, []);
 
-  const startCamera = async () => {
+  const playCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      await fetch("http://192.168.0.100:5000/camera/play", { method: "POST" });
+      setIsPaused(false);
     } catch (err) {
-      console.error("Error accessing camera:", err);
+      console.error("Error playing camera:", err);
     }
   };
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
+  const pauseCamera = async () => {
+    try {
+      await fetch("http://192.168.0.100:5000/camera/pause", { method: "POST" });
+      setIsPaused(true);
+    } catch (err) {
+      console.error("Error pausing camera:", err);
     }
   };
 
-  const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext("2d");
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(
-          videoRef.current,
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
-
-        const imageDataUrl = canvasRef.current.toDataURL("image/png");
-        setCapturedImage(imageDataUrl);
-        setIsCapturing(false);
-        analyzeImage(imageDataUrl);
+  const captureImage = async () => {
+    try {
+      await pauseCamera();
+      if (imgRef.current) {
+        const img = imgRef.current;
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const imageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          setCapturedImage(imageBase64);
+          analyzeImage(imageBase64);
+        }
       }
+      setIsCapturing(false);
+    } catch (err) {
+      console.error("Error capturing image:", err);
     }
   };
 
   const analyzeImage = (imageUrl: string) => {
     setIsAnalyzing(true);
 
-    // Simulate API call to AWS Bedrock for image analysis
-    setTimeout(() => {
-      // Mock result - in a real app, this would come from AWS Bedrock
-      const mockResults = [
+    const scanTrash = async () => {
+      const response = await fetch(
+        "https://2e0b-60-250-102-193.ngrok-free.app/trash/scan_trash",
         {
-          name: "Plastic Bottle",
-          type: "Plastic",
-          recyclable: true,
-          xpEarned: 50,
-        },
-        {
-          name: "Banana Peel",
-          type: "Organic",
-          recyclable: true,
-          xpEarned: 30,
-        },
-        {
-          name: "Styrofoam Cup",
-          type: "Polystyrene",
-          recyclable: false,
-          xpEarned: 20,
-        },
-        {
-          name: "Cardboard Box",
-          type: "Paper",
-          recyclable: true,
-          xpEarned: 40,
-        },
-      ];
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ access_token: "", image_base64: imageUrl }),
+        }
+      );
 
-      // Select a random result
-      const randomResult =
-        mockResults[Math.floor(Math.random() * mockResults.length)];
-      setResult(randomResult);
+      const data = await response.json();
+      console.log("Scan result:", data);
+
+      if (!response.ok) {
+        console.error("Error analyzing image:", data);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      setResult(data);
       setIsAnalyzing(false);
-    }, 2000);
+    };
+
+    scanTrash();
   };
 
   const resetScan = () => {
     setCapturedImage(null);
     setResult(null);
     setIsCapturing(true);
+    playCamera();
   };
 
   return (
     <>
       <Navbar />
-      <div className="container mx-auto py-8 px-4 max-w-md relative">
+      <div className="container mx-auto py-8 px-4 max-w-xl relative">
         <div className="leaf leaf-1">
           <Leaf className="h-8 w-8 text-primary/30 animate-float" />
         </div>
@@ -156,10 +212,10 @@ export default function ScanTrashPage() {
             <div className="relative aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
               {isCapturing ? (
                 <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
+                  <img
+                    ref={imgRef}
+                    src={streamUrl}
+                    alt="Camera Stream"
                     className="w-full h-full object-cover"
                   />
                   <button className="camera-button" onClick={captureImage}>
@@ -196,41 +252,50 @@ export default function ScanTrashPage() {
                 <div className="scan-result">
                   <div
                     className={`scan-result-icon ${
-                      result.recyclable
+                      result.category === "recyclable"
                         ? "scan-result-recyclable"
-                        : "scan-result-non-recyclable"
+                        : result.category === "general waste"
+                        ? "scan-result-general-waste"
+                        : "scan-result-organic"
                     }`}
                   >
-                    {result.recyclable ? (
+                    {result.category === "recyclable" ? (
                       <Check className="h-8 w-8" />
-                    ) : (
+                    ) : result.category === "general waste" ? (
                       <X className="h-8 w-8" />
+                    ) : (
+                      <Leaf className="h-8 w-8" />
                     )}
                   </div>
 
-                  <h3 className="text-2xl font-bold mb-1">{result.name}</h3>
-                  <p className="text-lg mb-4">{result.type}</p>
+                  <h3 className="text-2xl font-bold mb-1">
+                    {result.sub_category}
+                  </h3>
+                  <p className="text-lg mb-4">{result.category}</p>
 
                   <div className="scan-result-message">
-                    {result.recyclable
+                    {result.category === "recyclable"
                       ? "♻️ This item is recyclable!"
-                      : "❌ This item is NOT recyclable"}
+                      : result.category === "general waste"
+                      ? "❌ This item is general waste"
+                      : "🌱 This item is organic"}
                   </div>
 
                   <div className="text-center">
                     <p className="text-sm text-muted-foreground mb-2">
-                      {result.recyclable
+                      {result.category === "recyclable"
                         ? "Place this item in the recycling bin"
-                        : "This should go in general waste"}
+                        : result.category === "general waste"
+                        ? "This should go in general waste"
+                        : "This should go in the organic waste bin"}
                     </p>
                     <p className="text-primary font-bold">
-                      +{result.xpEarned} XP earned!
+                      Remember to recycle responsibly!
                     </p>
                   </div>
                 </div>
               )}
             </div>
-            <canvas ref={canvasRef} className="hidden" />
           </CardContent>
           <CardFooter className="flex gap-2 p-4">
             {!isCapturing ? (
@@ -238,7 +303,10 @@ export default function ScanTrashPage() {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => setIsCapturing(true)}
+                  onClick={() => {
+                    setIsCapturing(true);
+                    playCamera();
+                  }}
                 >
                   {capturedImage ? "Retake" : "Start Camera"}
                 </Button>
@@ -252,7 +320,10 @@ export default function ScanTrashPage() {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setIsCapturing(false)}
+                onClick={() => {
+                  setIsCapturing(false);
+                  pauseCamera();
+                }}
               >
                 Cancel
               </Button>

@@ -1,41 +1,90 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Trophy, Medal, Award, User, Leaf } from "lucide-react"
-import { useState } from "react"
-import { Navbar } from "@/components/navbar"
-
-type LeaderboardUser = {
-  id: number
-  name: string
-  level: number
-  xp: number
-  badge: string
-  isCurrentUser?: boolean
-}
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Trophy, Medal, Award, User as UserIcon, Leaf } from "lucide-react";
+import { useContext, useEffect } from "react";
+import { Navbar } from "@/components/navbar";
+import { UserContext, User, Disposal } from "@/hooks/UserContext";
+import { supabase } from "@/components/supabase";
+import { useRouter } from "next/navigation";
+import { getCityFromBrowser } from "../auth/callback/page";
 
 export default function LeaderboardPage() {
-  const [globalUsers] = useState<LeaderboardUser[]>([
-    { id: 1, name: "EcoNinja", level: 24, xp: 24890, badge: "Lord of the Litter" },
-    { id: 2, name: "RecycleQueen", level: 19, xp: 19340, badge: "Garbage Guru" },
-    { id: 3, name: "GreenGuru", level: 18, xp: 18120, badge: "Garbage Guru" },
-    { id: 4, name: "WasteWarrior", level: 15, xp: 15780, badge: "Garbage Guru" },
-    { id: 5, name: "TrashTitan", level: 14, xp: 14250, badge: "Garbage Guru" },
-    { id: 6, name: "EcoHero", level: 12, xp: 12340, badge: "Garbage Guru" },
-    { id: 7, name: "RecycleMaster", level: 10, xp: 10120, badge: "Garbage Guru" },
-    { id: 8, name: "You", level: 5, xp: 5340, badge: "Bin Boss", isCurrentUser: true },
-    { id: 9, name: "GreenNewbie", level: 3, xp: 3120, badge: "Trash Trainee" },
-    { id: 10, name: "EcoLearner", level: 2, xp: 2340, badge: "Trash Trainee" },
-  ])
+  const { user, setUser } = useContext(UserContext);
+  const router = useRouter();
 
-  const [localUsers] = useState<LeaderboardUser[]>([
-    { id: 1, name: "LocalHero", level: 15, xp: 15340, badge: "Garbage Guru" },
-    { id: 2, name: "NeighborGreen", level: 12, xp: 12780, badge: "Garbage Guru" },
-    { id: 3, name: "BlockRecycler", level: 10, xp: 10120, badge: "Garbage Guru" },
-    { id: 4, name: "You", level: 5, xp: 5340, badge: "Bin Boss", isCurrentUser: true },
-    { id: 5, name: "StreetCleaner", level: 4, xp: 4250, badge: "Trash Trainee" },
-  ])
+  useEffect(() => {
+    const initUser = async () => {
+      if (user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const userSession = session.user;
+      const region = await getCityFromBrowser();
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("*")
+        .eq("email", userSession.email)
+        .single();
+
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .ilike("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", userSession.id);
+
+      const userData = {
+        id: userSession.id,
+        name: userSession.user_metadata.name,
+        email: userSession.email,
+        image: userSession.user_metadata.avatar_url,
+        region,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
+        total_disposal: existingUser?.total_disposal || 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+        disposals: (disposals as Disposal[]) || [],
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+    };
+
+    initUser();
+  }, []);
+
+  const topUsersRegion: User[] = user?.topUsersRegion || [];
+  const topUsersGlobal: User[] = user?.topUsersGlobal || [];
 
   return (
     <>
@@ -45,14 +94,19 @@ export default function LeaderboardPage() {
           <Leaf className="h-10 w-10 text-primary/20 animate-float" />
         </div>
         <div className="leaf leaf-4">
-          <Leaf className="h-8 w-8 text-primary/20 animate-float" style={{ animationDelay: "1.5s" }} />
+          <Leaf
+            className="h-8 w-8 text-primary/20 animate-float"
+            style={{ animationDelay: "1.5s" }}
+          />
         </div>
 
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
             <Trophy className="h-8 w-8 text-primary" /> Leaderboard
           </h1>
-          <p className="text-muted-foreground">See how you rank against other recycling champions</p>
+          <p className="text-muted-foreground">
+            See how you rank against other recycling champions
+          </p>
         </div>
 
         <Tabs defaultValue="global" className="w-full">
@@ -65,47 +119,81 @@ export default function LeaderboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Global Leaderboard</CardTitle>
-                <CardDescription>Top recyclers from around the world</CardDescription>
+                <CardDescription>
+                  Top recyclers from around the world
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {globalUsers.map((user, index) => (
-                    <div
-                      key={user.id}
-                      className={`leaderboard-item ${
-                        user.isCurrentUser ? "bg-primary/5 border-2 border-primary/20" : ""
-                      }`}
-                    >
-                      <div className="flex-shrink-0 w-10">
-                        {index === 0 ? (
-                          <Trophy className="h-8 w-8 text-yellow-500" />
-                        ) : index === 1 ? (
-                          <Medal className="h-8 w-8 text-gray-400" />
-                        ) : index === 2 ? (
-                          <Medal className="h-8 w-8 text-amber-700" />
-                        ) : (
-                          <div className="leaderboard-rank bg-muted">{index + 1}</div>
-                        )}
-                      </div>
-
-                      <div className="leaderboard-user">
-                        <div className="leaderboard-user-name">
-                          {user.name}
-                          {user.isCurrentUser && " (You)"}
-                          {user.isCurrentUser && <User className="ml-1 h-4 w-4 text-primary" />}
+                {topUsersGlobal.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No records found.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {topUsersGlobal.map((u, index) => (
+                      <div
+                        key={u.id}
+                        className={`flex items-center gap-4 p-4 rounded-lg ${
+                          u.id === user?.id
+                            ? "bg-primary/5 border-2 border-primary/20"
+                            : "bg-muted/50"
+                        }`}
+                      >
+                        {/* Rank */}
+                        <div className="flex flex-col items-center w-8">
+                          {index === 0 ? (
+                            <Trophy className="h-6 w-6 text-yellow-500" />
+                          ) : index === 1 ? (
+                            <Medal className="h-6 w-6 text-gray-400" />
+                          ) : index === 2 ? (
+                            <Medal className="h-6 w-6 text-amber-700" />
+                          ) : (
+                            <div className="text-sm font-semibold">
+                              {index + 1}
+                            </div>
+                          )}
                         </div>
-                        <div className="leaderboard-user-stats">
-                          <p>{user.badge}</p>
-                          <div className="leaderboard-user-level">
-                            <Award className="h-4 w-4 text-primary" />
-                            <span>Level {user.level}</span>
-                            <span className="ml-1">({user.xp.toLocaleString()} XP)</span>
+
+                        {/* Profile Image */}
+                        <div className="flex-shrink-0">
+                          {u.image ? (
+                            <img
+                              src={u.image}
+                              alt={u.name}
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                              <UserIcon className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold flex items-center">
+                            {u.name}
+                            {u.id === user?.id && (
+                              <>
+                                {" "}
+                                (You)
+                                <UserIcon className="ml-1 h-4 w-4 text-primary" />
+                              </>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {u.region}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-primary mt-1">
+                            <Award className="h-4 w-4" />
+                            <span>Level {u.level}</span>
+                            <span>({u.exp.toLocaleString()} XP)</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -114,52 +202,89 @@ export default function LeaderboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Local Leaderboard</CardTitle>
-                <CardDescription>Top recyclers in your area</CardDescription>
+                <CardDescription>
+                  Top recyclers in {user?.region}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {localUsers.map((user, index) => (
-                    <div
-                      key={user.id}
-                      className={`leaderboard-item ${
-                        user.isCurrentUser ? "bg-primary/5 border-2 border-primary/20" : ""
-                      }`}
-                    >
-                      <div className="flex-shrink-0 w-10">
-                        {index === 0 ? (
-                          <Trophy className="h-8 w-8 text-yellow-500" />
-                        ) : index === 1 ? (
-                          <Medal className="h-8 w-8 text-gray-400" />
-                        ) : index === 2 ? (
-                          <Medal className="h-8 w-8 text-amber-700" />
-                        ) : (
-                          <div className="leaderboard-rank bg-muted">{index + 1}</div>
-                        )}
-                      </div>
-
-                      <div className="leaderboard-user">
-                        <div className="leaderboard-user-name">
-                          {user.name}
-                          {user.isCurrentUser && " (You)"}
-                          {user.isCurrentUser && <User className="ml-1 h-4 w-4 text-primary" />}
+                {topUsersRegion.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No records found.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {topUsersRegion.map((u, index) => (
+                      <div
+                        key={u.id}
+                        className={`flex items-center gap-4 p-4 rounded-lg ${
+                          u.id === user?.id
+                            ? "bg-primary/5 border-2 border-primary/20"
+                            : "bg-muted/50"
+                        }`}
+                      >
+                        {/* Rank */}
+                        <div className="flex flex-col items-center w-8">
+                          {index === 0 ? (
+                            <Trophy className="h-6 w-6 text-yellow-500" />
+                          ) : index === 1 ? (
+                            <Medal className="h-6 w-6 text-gray-400" />
+                          ) : index === 2 ? (
+                            <Medal className="h-6 w-6 text-amber-700" />
+                          ) : (
+                            <div className="text-sm font-semibold">
+                              {index + 1}
+                            </div>
+                          )}
                         </div>
-                        <div className="leaderboard-user-stats">
-                          <p>{user.badge}</p>
-                          <div className="leaderboard-user-level">
-                            <Award className="h-4 w-4 text-primary" />
-                            <span>Level {user.level}</span>
-                            <span className="ml-1">({user.xp.toLocaleString()} XP)</span>
+
+                        {/* Profile Image */}
+                        <div className="flex-shrink-0">
+                          {u.image ? (
+                            <img
+                              src={u.image}
+                              alt={u.name}
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                              <UserIcon className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* User Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold flex items-center">
+                            {u.name}
+                            {u.id === user?.id && (
+                              <>
+                                {" "}
+                                (You)
+                                <UserIcon className="ml-1 h-4 w-4 text-primary" />
+                              </>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {u.region}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-primary mt-1">
+                            <Award className="h-4 w-4" />
+                            <span>Level {u.level}</span>
+                            <span>({u.exp.toLocaleString()} XP)</span>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
     </>
-  )
+  );
+}
+function setUser(arg0: User) {
+  throw new Error("Function not implemented.");
 }

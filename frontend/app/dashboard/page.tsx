@@ -22,37 +22,143 @@ import {
   Check,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { JSX, ReactNode, useContext, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
+import { Disposal, User, UserContext } from "@/hooks/UserContext";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/components/supabase";
+import { getCityFromBrowser } from "../auth/callback/page";
 
 export default function Dashboard() {
-  const [level, setLevel] = useState(5);
-  const [xp, setXp] = useState(2500);
-  const [nextLevelXp, setNextLevelXp] = useState(3000);
-  const [badge, setBadge] = useState("Bin Boss");
-  const [recentActivity, setRecentActivity] = useState([
-    {
-      id: 1,
-      type: "Plastic Bottle",
-      category: "Recyclable",
-      points: 50,
-      date: "Today, 2:30 PM",
-    },
-    {
-      id: 2,
-      type: "Banana Peel",
-      category: "Organic",
-      points: 30,
-      date: "Today, 11:15 AM",
-    },
-    {
-      id: 3,
-      type: "Cardboard Box",
-      category: "Recyclable",
-      points: 70,
-      date: "Yesterday, 4:45 PM",
-    },
-  ]);
+  const router = useRouter();
+  const { user, setUser } = useContext(UserContext);
+
+  useEffect(() => {
+    const initUser = async () => {
+      if (user) return;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const userSession = session.user;
+      const region = await getCityFromBrowser();
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("*")
+        .eq("email", userSession.email)
+        .single();
+
+      const { data: topUsersRegion } = await supabase
+        .from("user")
+        .select("*")
+        .ilike("region", region)
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: topUsersGlobal } = await supabase
+        .from("user")
+        .select("*")
+        .order("level", { ascending: false })
+        .order("exp", { ascending: false })
+        .limit(10);
+
+      const { data: disposals } = await supabase
+        .from("disposal")
+        .select("*")
+        .eq("user_id", userSession.id);
+
+      const userData = {
+        id: userSession.id,
+        name: userSession.user_metadata.name,
+        email: userSession.email,
+        image: userSession.user_metadata.avatar_url,
+        region,
+        exp: existingUser?.exp || 0,
+        level: existingUser?.level || 1,
+        total_disposal: existingUser?.total_disposal || 0,
+        topUsersRegion: topUsersRegion || [],
+        topUsersGlobal: topUsersGlobal || [],
+        disposals: (disposals as Disposal[]) || [],
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+    };
+
+    initUser();
+  }, []);
+
+  console.log("User data:", user);
+
+  const userName = user?.name || "User";
+  const userImage = user?.image || "/default.png";
+  const userRegion = user?.region || "Unknown Region";
+  const userEmail = user?.email || "";
+  const level = user?.level || 1;
+  const exp = user?.exp || 0;
+  const totalDisposal = user?.total_disposal || 0;
+
+  const nextLevelExp = 100 * level;
+  let badge = "";
+  let nextBadge = "";
+  let nextBadgeLevel = 0;
+  if (level < 5) {
+    badge = "Real Trash";
+    nextBadge = "Trash Trainee";
+    nextBadgeLevel = 5;
+  } else if (level < 10) {
+    badge = "Trash Trainee";
+    nextBadge = "Bin Boss";
+    nextBadgeLevel = 10;
+  } else if (level < 15) {
+    badge = "Bin Boss";
+    nextBadge = "Garbage Guru";
+    nextBadgeLevel = 15;
+  } else if (level < 20) {
+    badge = "Garbage Guru";
+    nextBadge = "Lord of the Litter";
+    nextBadgeLevel = 20;
+  } else {
+    badge = "Lord of the Litter";
+    nextBadge = "Maxed Out!";
+    nextBadgeLevel = 20;
+  }
+  const topUsersRegion = user?.topUsersRegion || [];
+
+  const recentActivity = user?.disposals || [];
+
+  // const [recentActivity, setRecentActivity] = useState([
+  //   {
+  //     id: 1,
+  //     type: "Plastic Bottle",
+  //     category: "Recyclable",
+  //     points: 50,
+  //     date: "Today, 2:30 PM",
+  //   },
+  //   {
+  //     id: 2,
+  //     type: "Banana Peel",
+  //     category: "Organic",
+  //     points: 30,
+  //     date: "Today, 11:15 AM",
+  //   },
+  //   {
+  //     id: 3,
+  //     type: "Cardboard Box",
+  //     category: "Recyclable",
+  //     points: 70,
+  //     date: "Yesterday, 4:45 PM",
+  //   },
+  // ]);
 
   return (
     <>
@@ -70,7 +176,7 @@ export default function Dashboard() {
 
         <div className="mb-8">
           <h1 className="font-fredoka text-3xl font-bold mb-2">
-            Welcome back, Eco Warrior!
+            Welcome back, {userName}!
           </h1>
           <p className="text-muted-foreground">
             Track your recycling progress and earn rewards
@@ -88,43 +194,54 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center text-center mb-6">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                      <Award className="h-12 w-12 text-primary" />
+                  <div className="relative mb-4">
+                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-teal-700">
+                      <Image
+                        src={userImage}
+                        alt="User Image"
+                        width={96}
+                        height={96}
+                        className="rounded-full object-cover"
+                      />
                     </div>
-                    <div className="absolute -bottom-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-background">
+                    <div className="absolute bottom-0 right-0 bg-primary text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-background">
                       {level}
                     </div>
                   </div>
                   <h3 className="font-fredoka text-xl font-bold mb-1">
-                    Eco Warrior
+                    {userName}
+                  </h3>
+                  <h3 className="font-fredoka text-xs text-muted-foreground mb-5">
+                    {userEmail}
                   </h3>
                   <p className="text-muted-foreground">
-                    Level {level} • {badge}
+                    Level {level} ({badge})
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <div className="progress-label">
-                      <span>XP Progress</span>
+                      <span>EXP Progress</span>
                       <span>
-                        {xp} / {nextLevelXp}
+                        {exp} / {nextLevelExp}
                       </span>
                     </div>
                     <Progress
-                      value={(xp / nextLevelXp) * 100}
+                      value={(exp / nextLevelExp) * 100}
                       className="h-2"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div className="dashboard-stat">
-                      <p className="dashboard-stat-value font-fredoka">127</p>
-                      <p className="dashboard-stat-label">Items Recycled</p>
+                      <p className="dashboard-stat-value font-fredoka">
+                        {totalDisposal}
+                      </p>
+                      <p className="dashboard-stat-label">Total Disposal</p>
                     </div>
                     <div className="dashboard-stat">
-                      <p className="dashboard-stat-value font-fredoka">4,350</p>
+                      <p className="dashboard-stat-value font-fredoka">{exp}</p>
                       <p className="dashboard-stat-label">Total XP</p>
                     </div>
                   </div>
@@ -136,9 +253,9 @@ export default function Dashboard() {
                         <Award className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">Garbage Guru</p>
+                        <p className="font-medium">{nextBadge}</p>
                         <p className="text-xs text-muted-foreground">
-                          Reach Level 10
+                          Reach Level {nextBadgeLevel} to unlock
                         </p>
                       </div>
                     </div>
@@ -151,57 +268,59 @@ export default function Dashboard() {
               <div className="h-3 bg-gradient-to-r from-primary to-green-400"></div>
               <CardHeader className="pb-2">
                 <CardTitle className="font-fredoka">Leaderboard</CardTitle>
-                <CardDescription>Top recyclers this week</CardDescription>
+                <CardDescription>Top recyclers, {userRegion}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="leaderboard-item bg-primary/5">
-                    <div className="leaderboard-rank bg-primary text-white">
-                      1
-                    </div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">EcoNinja</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 12 • 7,890 XP</p>
-                      </div>
-                    </div>
-                  </div>
+                  {topUsersRegion && topUsersRegion.length > 0 ? (
+                    topUsersRegion.map((user, index) => (
+                      <div
+                        key={user.id || index}
+                        className="leaderboard-item flex items-center gap-3 bg-primary/5 hover:bg-primary/10 p-3 rounded-lg transition-colors"
+                      >
+                        <div className="leaderboard-rank flex-shrink-0 w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </div>
 
-                  <div className="leaderboard-item">
-                    <div className="leaderboard-rank bg-muted">2</div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">RecycleQueen</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 10 • 6,240 XP</p>
-                      </div>
-                    </div>
-                  </div>
+                        <div className="relative w-10 h-10 overflow-hidden rounded-full border-2 border-background flex-shrink-0">
+                          <Image
+                            src={user.image || "/default.png"}
+                            alt={`${user.name}'s profile`}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
 
-                  <div className="leaderboard-item">
-                    <div className="leaderboard-rank bg-muted">3</div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">GreenGuru</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 9 • 5,780 XP</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="leaderboard-user-name font-medium truncate">
+                            {user.name}
+                          </p>
+                          <p className="leaderboard-user-stats text-xs text-muted-foreground truncate">
+                            Level {user.level} ({user.exp} EXP)
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="leaderboard-item bg-muted/30">
-                    <div className="leaderboard-rank bg-muted">8</div>
-                    <div className="leaderboard-user">
-                      <p className="leaderboard-user-name">You</p>
-                      <div className="leaderboard-user-stats">
-                        <p>Level 5 • 2,500 XP</p>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <div className="w-12 h-12 bg-muted/30 rounded-full flex items-center justify-center mb-3">
+                        <Award className="h-6 w-6 text-muted-foreground/60" />
                       </div>
+                      <h3 className="text-sm font-medium mb-1">
+                        No leaderboard data
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Start recycling to see rankings
+                      </p>
                     </div>
-                  </div>
+                  )}
 
                   <Link
                     href="/leaderboard"
                     className="flex items-center justify-center text-sm text-primary hover:underline mt-2"
                   >
-                    View full leaderboard{" "}
+                    View full leaderboard
                     <ArrowRight className="ml-1 h-3 w-3" />
                   </Link>
                 </div>
@@ -245,7 +364,7 @@ export default function Dashboard() {
                       Prove Disposal
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      Submit proof of proper disposal to earn XP and level up
+                      Submit proof of proper disposal to earn EXP and level up
                       your recycling game
                     </p>
                     <Button className="w-full group-hover:bg-primary/90 transition-colors mx-auto flex justify-center">
@@ -266,36 +385,88 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="activity-item">
-                      <div className="activity-icon">
-                        {activity.category === "Recyclable" ? (
-                          <Recycle className="h-5 w-5" />
-                        ) : (
-                          <Trash2 className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div className="activity-content">
-                        <div className="activity-header">
-                          <p className="activity-title">{activity.type}</p>
-                          <p className="activity-points">
-                            +{activity.points} XP
-                          </p>
+                  {recentActivity && recentActivity.length > 0 ? (
+                    recentActivity.map((activity) => (
+                      <div key={activity.id} className="activity-item">
+                        <div className="activity-icon">
+                          {activity.category === "Recyclable" ? (
+                            <Recycle className="h-5 w-5" />
+                          ) : (
+                            <Trash2 className="h-5 w-5" />
+                          )}
                         </div>
-                        <div className="activity-footer">
-                          <p>{activity.category}</p>
-                          <p>{activity.date}</p>
+                        <div className="activity-content">
+                          <div className="activity-header">
+                            <p className="activity-title">
+                              {activity.sub_category}
+                            </p>
+                            <p className="activity-points">+100 EXP</p>
+                          </div>
+                          <div className="activity-footer">
+                            <p>{activity.category}</p>
+                            <p className="activity-date">
+                              {(() => {
+                                const now = new Date();
+                                const date = new Date(activity.datetime);
+
+                                const isToday =
+                                  now.toDateString() === date.toDateString();
+                                const yesterday = new Date();
+                                yesterday.setDate(now.getDate() - 1);
+                                const isYesterday =
+                                  yesterday.toDateString() ===
+                                  date.toDateString();
+
+                                const timeString = date.toLocaleTimeString(
+                                  "en-US",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false, // if you prefer 24h format; remove if want AM/PM
+                                  }
+                                );
+
+                                if (isToday) return `Today, ${timeString}`;
+                                if (isYesterday)
+                                  return `Yesterday, ${timeString}`;
+
+                                return date.toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                });
+                              })()}
+                            </p>
+                          </div>
                         </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+                        <Trash2 className="h-8 w-8 text-muted-foreground/60" />
+                      </div>
+                      <h3 className="text-lg font-medium mb-1">
+                        No activity yet
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        Start scanning trash to see your activity here
+                      </p>
+                      <Button variant="outline" className="mt-4" asChild>
+                        <Link href="/scan-trash">Start Scanning</Link>
+                      </Button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             <Card className="dashboard-card">
               <CardHeader>
-                <CardTitle>Recyclo-Rumble™ Progress</CardTitle>
+                <CardTitle>Recyclo-Rumble Progress</CardTitle>
                 <CardDescription>
                   Your journey to becoming a recycling champion
                 </CardDescription>
@@ -304,69 +475,66 @@ export default function Dashboard() {
                 <div className="relative">
                   <div className="absolute top-0 bottom-0 left-[15px] w-[2px] bg-muted" />
 
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted">
-                      <div className="timeline-marker-inner bg-primary" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title">Real Trash</h3>
-                      <p className="timeline-subtitle">
-                        Level 0 • Starting your journey
-                      </p>
-                    </div>
-                  </div>
+                  {[
+                    {
+                      levelReq: 1,
+                      title: "Real Trash",
+                      subtitle: "Level 1 • Starting your journey",
+                    },
+                    {
+                      levelReq: 5,
+                      title: "♻️ Trash Trainee",
+                      subtitle: "Level 5 • Learning the basics",
+                    },
+                    {
+                      levelReq: 10,
+                      title: "🚮 Bin Boss",
+                      subtitle: "Level 10 • Master of the bins",
+                    },
+                    {
+                      levelReq: 15,
+                      title: "🧹 Garbage Guru",
+                      subtitle: "Level 15 • Master the art of recycling",
+                    },
+                    {
+                      levelReq: 20,
+                      title: "👑 Lord of the Litter",
+                      subtitle: "Level 20+ • The ultimate recycling champion",
+                    },
+                  ].map((item, idx, arr) => {
+                    const nextLevelReq = arr[idx + 1]?.levelReq ?? Infinity;
+                    const isAchieved = level >= item.levelReq;
+                    const isCurrent =
+                      level >= item.levelReq && level < nextLevelReq;
 
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted">
-                      <div className="timeline-marker-inner bg-primary" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title">♻️ Trash Trainee</h3>
-                      <p className="timeline-subtitle">
-                        Level 1 • Learning the basics
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-primary">
-                      <Check className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title">🚮 Bin Boss</h3>
-                      <p className="timeline-subtitle">
-                        Level 5 • Current Level
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted/50">
-                      <div className="timeline-marker-inner bg-muted" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title text-muted-foreground">
-                        🧹 Garbage Guru
-                      </h3>
-                      <p className="timeline-subtitle">
-                        Level 10 • Master the art of recycling
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="timeline-item">
-                    <div className="timeline-marker bg-muted/50">
-                      <div className="timeline-marker-inner bg-muted" />
-                    </div>
-                    <div className="timeline-content">
-                      <h3 className="timeline-title text-muted-foreground">
-                        👑 Lord of the Litter
-                      </h3>
-                      <p className="timeline-subtitle">
-                        Level 20+ • The ultimate recycling champion
-                      </p>
-                    </div>
-                  </div>
+                    return (
+                      <div className="timeline-item" key={item.levelReq}>
+                        <div
+                          className={`timeline-marker ${
+                            isCurrent
+                              ? "bg-primary border-2 border-teal-100" // current -> special highlight
+                              : isAchieved
+                              ? "bg-primary"
+                              : "bg-muted/50"
+                          }`}
+                        >
+                          {isAchieved && !isCurrent && (
+                            <Check className="h-4 w-4 text-white" />
+                          )}
+                        </div>
+                        <div className="timeline-content">
+                          <h3
+                            className={`timeline-title ${
+                              !isAchieved ? "text-muted-foreground" : ""
+                            } ${isCurrent ? "font-bold text-primary" : ""}`}
+                          >
+                            {item.title}
+                          </h3>
+                          <p className="timeline-subtitle">{item.subtitle}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -375,4 +543,9 @@ export default function Dashboard() {
       </div>
     </>
   );
+}
+function UseContext(
+  UserProvider: ({ children }: { children: ReactNode }) => JSX.Element
+): { user: any } {
+  throw new Error("Function not implemented.");
 }
