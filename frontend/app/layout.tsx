@@ -2,6 +2,7 @@ import type React from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { fredoka, quicksand } from "./fonts";
+import { UserProvider } from "../hooks/UserContext";
 
 export const metadata = {
   title: "TrashTalker - The Sassy Recycling App",
@@ -22,7 +23,7 @@ export default function RootLayout({
     >
       <body className="font-quicksand" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
+          <UserProvider>{children}</UserProvider>
         </ThemeProvider>
       </body>
     </html>

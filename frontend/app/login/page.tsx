@@ -8,20 +8,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Recycle, Leaf } from "lucide-react";
+import { Leaf } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTheme } from "next-themes";
+import { supabase } from "../../components/supabase";
 
 export default function LoginPage() {
   const { theme } = useTheme();
-  const router = useRouter();
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     // In a real app, you would authenticate with Google via Supabase here
     console.log("Logging in with Google");
-    router.push("/dashboard");
+
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${location.origin}/auth/callback`,
+      },
+    });
   };
 
   return (

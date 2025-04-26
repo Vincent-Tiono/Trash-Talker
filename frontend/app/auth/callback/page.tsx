@@ -1,0 +1,73 @@
+// app/auth/callback/page.tsx
+"use client";
+import { useEffect, useContext } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../../components/supabase";
+import { UserContext, User } from "../../../hooks/UserContext";
+
+export default function Callback() {
+  const router = useRouter();
+  const { user, setUser } = useContext(UserContext);
+
+  useEffect(() => {
+    const initUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return router.push("/login");
+
+      console.log("Session:", session);
+
+      const user = session.user;
+      const region = await getCityFromBrowser();
+
+      console.log("User region:", region);
+      console.log("User data:", user);
+
+      const { data: existingUser } = await supabase
+        .from("user")
+        .select("id")
+        .eq("email", user.email)
+        .maybeSingle();
+
+      const userData = {
+        id: user.id,
+        name: user.user_metadata.name,
+        email: user.email,
+        image: user.user_metadata.avatar_url,
+        region,
+        exp: 0,
+        level: 1,
+        total_disposal: 0,
+      };
+
+      setUser(userData as User);
+
+      if (!existingUser) {
+        await supabase.from("user").insert(userData);
+      }
+
+      router.push("/dashboard");
+    };
+
+    initUser();
+  }, []);
+
+  return <p>Authenticating...</p>;
+}
+
+async function getCityFromBrowser(): Promise<string> {
+  try {
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject)
+    );
+    const { latitude, longitude } = pos.coords;
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+    );
+    const json = await res.json();
+    return json.address.city || json.address.town || "Unknown";
+  } catch {
+    return "Unknown";
+  }
+}

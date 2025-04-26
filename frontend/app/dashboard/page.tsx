@@ -22,14 +22,27 @@ import {
   Check,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { JSX, ReactNode, useState, useContext } from "react";
 import { Navbar } from "@/components/navbar";
+import { UserContext } from "@/hooks/UserContext";
 
 export default function Dashboard() {
-  const [level, setLevel] = useState(5);
-  const [xp, setXp] = useState(2500);
-  const [nextLevelXp, setNextLevelXp] = useState(3000);
-  const [badge, setBadge] = useState("Bin Boss");
+  const { user } = useContext(UserContext);
+
+  console.log("User data:", user);
+
+  const userName = user?.name || "User";
+  const userImage = user?.image || "/default.png";
+  const userRegion = user?.region || "Unknown Region";
+  const userEmail = user?.email || "";
+  const level = user?.level || 1;
+  const xp = user?.exp || 0;
+  const totalDisposal = user?.total_disposal || 0;
+
+  const nextLevelXp = 1000 * level;
+  const badge = "Trash Trainee";
+
   const [recentActivity, setRecentActivity] = useState([
     {
       id: 1,
@@ -70,7 +83,7 @@ export default function Dashboard() {
 
         <div className="mb-8">
           <h1 className="font-fredoka text-3xl font-bold mb-2">
-            Welcome back, Eco Warrior!
+            Welcome back, {userName}!
           </h1>
           <p className="text-muted-foreground">
             Track your recycling progress and earn rewards
@@ -89,15 +102,24 @@ export default function Dashboard() {
               <CardContent>
                 <div className="flex flex-col items-center text-center mb-6">
                   <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                      <Award className="h-12 w-12 text-primary" />
+                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-4 border-teal-700">
+                      <Image
+                        src={userImage}
+                        alt="User Image"
+                        width={96}
+                        height={96}
+                        className="rounded-full object-cover"
+                      />
                     </div>
                     <div className="absolute -bottom-2 -right-2 bg-primary text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-background">
                       {level}
                     </div>
                   </div>
                   <h3 className="font-fredoka text-xl font-bold mb-1">
-                    Eco Warrior
+                    {userName}
+                  </h3>
+                  <h3 className="font-fredoka text-xs mb-1 text-muted-foreground mb-5">
+                    {userEmail}
                   </h3>
                   <p className="text-muted-foreground">
                     Level {level} • {badge}
@@ -120,11 +142,13 @@ export default function Dashboard() {
 
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div className="dashboard-stat">
-                      <p className="dashboard-stat-value font-fredoka">127</p>
+                      <p className="dashboard-stat-value font-fredoka">
+                        {totalDisposal}
+                      </p>
                       <p className="dashboard-stat-label">Items Recycled</p>
                     </div>
                     <div className="dashboard-stat">
-                      <p className="dashboard-stat-value font-fredoka">4,350</p>
+                      <p className="dashboard-stat-value font-fredoka">{xp}</p>
                       <p className="dashboard-stat-label">Total XP</p>
                     </div>
                   </div>
@@ -151,7 +175,7 @@ export default function Dashboard() {
               <div className="h-3 bg-gradient-to-r from-primary to-green-400"></div>
               <CardHeader className="pb-2">
                 <CardTitle className="font-fredoka">Leaderboard</CardTitle>
-                <CardDescription>Top recyclers this week</CardDescription>
+                <CardDescription>Top recyclers, {userRegion}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -295,7 +319,7 @@ export default function Dashboard() {
 
             <Card className="dashboard-card">
               <CardHeader>
-                <CardTitle>Recyclo-Rumble™ Progress</CardTitle>
+                <CardTitle>Recyclo-Rumble Progress</CardTitle>
                 <CardDescription>
                   Your journey to becoming a recycling champion
                 </CardDescription>
@@ -311,7 +335,7 @@ export default function Dashboard() {
                     <div className="timeline-content">
                       <h3 className="timeline-title">Real Trash</h3>
                       <p className="timeline-subtitle">
-                        Level 0 • Starting your journey
+                        Level 1 • Starting your journey
                       </p>
                     </div>
                   </div>
@@ -323,7 +347,7 @@ export default function Dashboard() {
                     <div className="timeline-content">
                       <h3 className="timeline-title">♻️ Trash Trainee</h3>
                       <p className="timeline-subtitle">
-                        Level 1 • Learning the basics
+                        Level 5 • Learning the basics
                       </p>
                     </div>
                   </div>
@@ -335,7 +359,7 @@ export default function Dashboard() {
                     <div className="timeline-content">
                       <h3 className="timeline-title">🚮 Bin Boss</h3>
                       <p className="timeline-subtitle">
-                        Level 5 • Current Level
+                        Level 10 • Current Level
                       </p>
                     </div>
                   </div>
@@ -349,7 +373,7 @@ export default function Dashboard() {
                         🧹 Garbage Guru
                       </h3>
                       <p className="timeline-subtitle">
-                        Level 10 • Master the art of recycling
+                        Level 15 • Master the art of recycling
                       </p>
                     </div>
                   </div>
@@ -375,4 +399,9 @@ export default function Dashboard() {
       </div>
     </>
   );
+}
+function UseContext(
+  UserProvider: ({ children }: { children: ReactNode }) => JSX.Element
+): { user: any } {
+  throw new Error("Function not implemented.");
 }
