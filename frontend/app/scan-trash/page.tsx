@@ -16,6 +16,7 @@ import { supabase } from "@/components/supabase";
 import { Disposal, User, UserContext } from "@/hooks/UserContext";
 import { useRouter } from "next/navigation";
 import { getCityFromBrowser } from "../auth/callback/page";
+import { capitalize } from "@/utils/capitalize";
 
 export default function ScanTrashPage() {
   const { user, setUser } = useContext(UserContext);
@@ -95,18 +96,13 @@ export default function ScanTrashPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const imgRef = useRef<HTMLImageElement>(null);
-  const streamUrl = "http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg";
+  const streamUrl = "/api/proxy"; // URL of the MJPEG stream
 
   const captureImage = () => {
     try {
       if (imgRef.current) {
         const img = imgRef.current;
 
-        // Temporarily remove the image source URL to freeze the current frame
-        const currentSrc = img.src;
-        img.src = ""; // This removes the MJPEG stream, freezing the frame
-
-        // Set anonymous image to avoid CORS issues
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
@@ -126,9 +122,6 @@ export default function ScanTrashPage() {
           // Proceed to analyze the captured image
           analyzeImage(imageBase64);
         }
-
-        // Restore the original MJPEG stream URL to allow further captures
-        img.src = currentSrc;
 
         setIsCapturing(false);
       }
@@ -259,9 +252,9 @@ export default function ScanTrashPage() {
                   </div>
 
                   <h3 className="text-2xl font-bold mb-1">
-                    {result.sub_category}
+                    {capitalize(result.sub_category)}
                   </h3>
-                  <p className="text-lg mb-4">{result.category}</p>
+                  <p className="text-lg mb-4">{capitalize(result.category)}</p>
 
                   <div className="scan-result-message">
                     {result.category === "recyclable"
