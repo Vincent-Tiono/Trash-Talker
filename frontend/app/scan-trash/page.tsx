@@ -94,11 +94,12 @@ export default function ScanTrashPage() {
     xpEarned: number;
   }>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null
+  );
   const [audioLoading, setAudioLoading] = useState(false);
 
   const imgRef = useRef<HTMLImageElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const streamUrl = "/api/proxy"; // URL of the MJPEG stream
 
   const captureImage = () => {
@@ -135,7 +136,7 @@ export default function ScanTrashPage() {
 
   const analyzeImage = (imageUrl: string) => {
     setIsAnalyzing(true);
-    setAudioSrc(null);
+    setAudioElement(null);
 
     const scanTrash = async () => {
       const {
@@ -182,52 +183,31 @@ export default function ScanTrashPage() {
       } = await supabase.auth.getSession();
       const access_token = session?.access_token || "";
 
-      const message =
+      const text =
         resultData.category === "recyclable"
           ? `This is ${resultData.sub_category}. It is recyclable. Please place it in the recycling bin.`
           : `This is ${resultData.sub_category}. It is non-recyclable. Please place it in the trash bin.`;
 
-      const response = await fetch(
-        process.env.NEXT_PUBLIC_BACKEND_URL + "/trash/generate_tts",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            access_token,
-            message,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        console.error("TTS generation failed");
-        setAudioLoading(false);
-        setAudioSrc(null);
-        return;
-      }
-
-      const data = await response.json();
-      setAudioSrc(data.audio_url);
+      const audio = await fetchAndPlayAudio(access_token, text);
+      setAudioElement(audio);
     } catch (err) {
       console.error("Error generating TTS:", err);
-      setAudioSrc(null);
+      setAudioElement(null);
     } finally {
       setAudioLoading(false);
     }
   };
 
   const playAudio = () => {
-    if (audioRef.current && audioSrc) {
-      audioRef.current.play();
+    if (audioElement) {
+      audioElement.play();
     }
   };
 
   const resetScan = () => {
     setCapturedImage(null);
     setResult(null);
-    setAudioSrc(null);
+    setAudioElement(null);
     setIsCapturing(true);
   };
 
@@ -327,6 +307,7 @@ export default function ScanTrashPage() {
                         ? "Place this item in the recycling bin"
                         : "This should go in the non-recyclable waste bin"}
                     </p>
+
                     <p className="text-primary font-bold">
                       Remember to throw it in the right bin!
                     </p>
@@ -338,19 +319,16 @@ export default function ScanTrashPage() {
                       </div>
                     )}
 
-                    {audioSrc && (
-                      <div className="mt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                          onClick={playAudio}
-                        >
-                          <Volume2 className="h-4 w-4" />
-                          <span>Play Audio</span>
-                        </Button>
-                        <audio ref={audioRef} src={audioSrc} />
-                      </div>
+                    {audioElement && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 flex items-center gap-2 m-auto"
+                        onClick={playAudio}
+                      >
+                        <Volume2 className="h-4 w-4" />
+                        <span>Play Audio</span>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -391,4 +369,69 @@ export default function ScanTrashPage() {
       </div>
     </>
   );
+}
+
+// Function to fetch and prepare audio without autoplay
+async function fetchAndPlayAudio(
+  access_token: string,
+  text: string
+): Promise<HTMLAudioElement> {
+  try {
+    console.log("Fetching audio...");
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/trash/tts_polly`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          access_token,
+          text,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        "Error fetching audio:",
+        response.status,
+        response.statusText
+      );
+      throw new Error(`Failed to fetch audio: ${response.statusText}`);
+    }
+
+    console.log("Audio fetched successfully, processing...");
+
+    const data = await response.json();
+    const base64Audio = data.audio;
+    const contentType = data.content_type || "audio/mpeg";
+
+    if (!base64Audio) {
+      console.error("No audio data received");
+      throw new Error("No audio data received");
+    }
+
+    const byteCharacters = atob(base64Audio);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const audioBlob = new Blob([byteArray], { type: contentType });
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    const audio = new Audio(audioUrl);
+    audio.controls = true; // Optional: you can show native browser controls if you want
+    audio.preload = "auto";
+
+    console.log("Audio element prepared.");
+
+    return audio;
+  } catch (error) {
+    console.error("Error in fetchAndPlayAudio:", error);
+    throw error;
+  }
 }

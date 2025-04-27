@@ -1,13 +1,12 @@
-# app/core/bedrock_service.py
-
-import base64
 import json
 import boto3
 import re
 from langchain_community.chat_models import BedrockChat
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain.schema import HumanMessage
 from .config import settings
+import base64
 
 # Initialize Boto3 Bedrock client
 bedrock_client = boto3.client(
@@ -18,6 +17,138 @@ bedrock_client = boto3.client(
     aws_session_token=settings.AWS_SESSION_TOKEN,
 )
 
+# Initialize Bedrock LLM
+llm = BedrockChat(
+    model_id=settings.BEDROCK_MODEL_ID,
+    client=bedrock_client,
+    model_kwargs={
+        "temperature": settings.TEMPERATURE
+    }
+)
+
+
+class BedrockService:
+    """Service to interact with AWS Bedrock for trash classification and disposal verification."""
+
+    def _parse_response(self, raw: str) -> dict:
+        """Helper to fix Bedrock output and parse it safely."""
+        if not raw:
+            raise ValueError("Empty response from Bedrock.")
+
+        fixed_raw = raw.strip()
+        fixed_raw = re.sub(r"(?<!\\)'", '"', fixed_raw)
+
+        match = re.search(r"({.*})", fixed_raw, re.DOTALL)
+        if not match:
+            raise ValueError(f"Invalid JSON format from Bedrock: {raw}")
+
+        json_str = match.group(1)
+
+        try:
+            parsed = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse JSON: {json_str}") from e
+
+        if 'category' in parsed and isinstance(parsed['category'], str):
+            parsed['category'] = parsed['category'].lower()
+
+        if 'sub_category' in parsed and isinstance(parsed['sub_category'], str):
+            parsed['sub_category'] = parsed['sub_category'].lower()
+
+        if 'reason' in parsed and isinstance(parsed['reason'], str):
+            parsed['reason'] = parsed['reason'].strip()
+
+        return parsed
+
+    def classify_trash(self, image_base64: str) -> dict:
+        """Classify trash type based on image."""
+        instruction = (
+            "Analyze the image carefully and classify the type of trash shown.\n\n"
+            "Return ONLY a JSON object in this exact structure:\n"
+            "{\n"
+            "  \"category\": \"recyclable\" or \"non-recyclable\",\n"
+            "  \"sub_category\": \"specific type of trash\"\n"
+            "}\n"
+            "Important Rules:\n"
+            "- If recyclable, choose 'sub_category' from: "
+            "'paper and cardboard', 'plastics', 'glass', 'metals', "
+            "'batteries and electronics', 'food and organic waste', 'others'.\n"
+            "- If non-recyclable, set 'sub_category' to 'others'.\n"
+            "- If irrelevant image (not showing trash), set 'sub_category' to 'none'.\n"
+            "- Return category and sub_category in **lowercase**.\n"
+            "- Only return pure JSON. No additional text."
+        )
+
+        # Create message content with text and image
+        message_content = [
+            {
+                "type": "text",
+                "text": instruction
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image_base64}"
+                }
+            }
+        ]
+        
+        # Create a human message with the multimodal content
+        message = HumanMessage(content=message_content)
+        
+        # Invoke the model with the message
+        response = llm.invoke([message])
+        raw = response.content
+        
+        print("Raw response classify_trash:", raw)
+        return self._parse_response(raw)
+
+    def verify_disposal(self, image_base64: str) -> dict:
+        """Verify if trash is correctly disposed and classify it."""
+        instruction = """
+        Analyze the image to determine if it shows trash and its bin or container either partially or not and please dont be so strict. Return a JSON object in this structure:
+
+        {
+        "reason": "concise explanation",
+        "passed": true or false,
+        "category": "recyclable" or "non-recyclable",
+        "sub_category": "specific type of trash"
+        }
+
+        Conditions:
+        - "passed": true if both trash and bin/container are visible and action is clear, partially is fine.
+        - "passed": false if no trash or bin visible, or action doesn't pass.
+        - Special cases: if trash bin is clearly visible but no trash, classify as passed.
+
+        Strict Rules:
+        - Always use lowercase for both 'category' and 'sub_category'.
+        - No extra text or explanations, just the JSON.
+        """
+
+        # Create message content with text and image
+        message_content = [
+            {
+                "type": "text",
+                "text": instruction
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image_base64}"
+                }
+            }
+        ]
+        
+        # Create a human message with the multimodal content
+        message = HumanMessage(content=message_content)
+        
+        # Invoke the model with the message
+        response = llm.invoke([message])
+        raw = response.content
+        
+        print("Raw response verify_disposal:", raw)
+        return self._parse_response(raw)
+    
 # Polly client for TTS
 polly_client = boto3.client(
     service_name="polly",
@@ -34,27 +165,6 @@ translate_client = boto3.client(
     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
     aws_session_token=settings.AWS_SESSION_TOKEN,
 )
-
-# Initialize Bedrock LLM
-llm = BedrockChat(
-    model_id=settings.BEDROCK_MODEL_ID,
-    client=bedrock_client,
-    model_kwargs={
-        "temperature": settings.TEMPERATURE
-    }
-)
-
-# Shared prompt template
-template = PromptTemplate(
-    input_variables=["instruction", "image_base64"],
-    template="""
-        {instruction}
-
-        Image (base64):
-        {image_base64}
-    """
-)
-chain = LLMChain(llm=llm, prompt=template)
 
 def translate_to_chinese(text: str) -> str:
     # Use AWS Translate or an external API
@@ -95,118 +205,3 @@ class PollyService:
 
         except Exception as e:
             raise ValueError(f"Error during speech synthesis: {str(e)}")
-
-class BedrockService:
-    """Service to interact with AWS Bedrock for trash classification and disposal verification."""
-
-    def _parse_response(self, raw: str) -> dict:
-        """Helper to fix Bedrock output and parse it safely."""
-        if not raw:
-            raise ValueError("Empty response from Bedrock.")
-
-        # Fix common mistakes: use double quotes
-        fixed_raw = raw.strip()
-        fixed_raw = re.sub(r"(?<!\\)'", '"', fixed_raw)  # replace single quotes with double quotes
-        
-        # Remove any leading/trailing content outside JSON
-        match = re.search(r"({.*})", fixed_raw, re.DOTALL)
-        if not match:
-            raise ValueError(f"Invalid JSON format from Bedrock: {raw}")
-        
-        json_str = match.group(1)
-        
-        try:
-            parsed = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Failed to parse JSON: {json_str}") from e
-
-        # Normalize output: ensure all values like 'category' and 'sub_category' are lowercase
-        if 'category' in parsed and isinstance(parsed['category'], str):
-            parsed['category'] = parsed['category'].lower()
-
-        if 'sub_category' in parsed and isinstance(parsed['sub_category'], str):
-            parsed['sub_category'] = parsed['sub_category'].lower()
-
-        # Also lowercase 'reason' if it exists (optional)
-        if 'reason' in parsed and isinstance(parsed['reason'], str):
-            parsed['reason'] = parsed['reason'].strip()
-
-        return parsed
-
-    def classify_trash(self, image_base64: str) -> dict:
-        """Classify trash type based on image."""
-        instruction = """
-        Analyze the image carefully and classify the trash type with strict certainty. Return ONLY a JSON object in this exact structure: 
-        {"category": "recyclable" or "non-recyclable", "sub_category": "specific type of trash"}.
-
-        Strict Classification Rules:
-        - Both trash and a trash bin or container must be visible in the image. At least one of them must be clearly noticeable. Partial visibility of either trash or bin is acceptable, but both must be present to ensure proper classification. If either trash or bin is missing or barely visible, do not classify.
-        - If the trash bin or container is visible but without trash, consider it for classification, but ensure that the bin or container is clearly noticeable and identifiable.
-        - If recyclable, 'sub_category' must strictly match one of the following: 'paper and cardboard', 'plastics', 'glass', 'metals', 'batteries and electronics', 'food and organic waste', 'others'. If the item does not match these categories, classify as non-recyclable.
-        - If non-recyclable, set 'sub_category' to 'others'. Ensure that the item is clearly not recyclable in any way.
-        - Examples:
-        * Book → recyclable / paper and cardboard
-        * Plastic bottle → recyclable / plastics
-        * Banana peel → recyclable / food and organic waste
-        * Smartphone → recyclable / batteries and electronics
-        * Broken ceramic → non-recyclable / others
-        * Fast food wrapper → non-recyclable / others
-        - If the item is ambiguous, partially hidden, blurred, or not confidently recognizable as trash, classify as non-recyclable / others. Do not make guesses or assumptions.
-        - If the item is not clearly trash, or the image is of an irrelevant object or scene, classify as non-recyclable / others and set 'sub_category' to 'none'. For example, a picture of a car or a person is irrelevant and should be classified as 'non-recyclable' with 'sub_category' as 'none'.
-        - Items that are not clearly identifiable should not be classified as recyclable or non-recyclable. Use 'others' only when the item is confirmed to be trash but doesn't fit in other categories.
-
-        Other Important Rules:
-        - Always use lowercase for 'category' and 'sub_category'.
-        - Only return pure JSON without any extra text, explanations, or notes.
-        - If there is any doubt regarding the item type or classification, mark it as non-recyclable and set the sub_category to 'others'.
-        """
-
-
-        raw = chain.run({
-            "instruction": instruction,
-            "image_base64": image_base64
-        })
-        print("Raw response classify_trash:", raw)
-        return self._parse_response(raw)
-
-    def verify_disposal(self, image_base64: str) -> dict:
-        """Verify if trash is correctly disposed and classify it."""
-        instruction = """
-                Analyze the image and determine if it likely shows the action of disposing trash properly.
-
-                Return ONLY a JSON object in this exact structure:
-                {
-                "reason": "concise explanation (7 words or fewer)",
-                "passed": true or false,
-                "category": "recyclable" or "non-recyclable",
-                "sub_category": "specific type of trash"
-                }
-
-                Passing Conditions (for 'passed': true):
-                - Trash and bin/container are at least partially visible.
-                - The action of disposal is reasonably clear.
-                - Prioritize if both trash and bin are visible. If only one is visible, consider it less verified but valid if the action is clear.
-                - If both trash and bin are visible, it's definitely verified.
-
-                Failing Conditions (for 'passed': false):
-                - No noticeable trash or bin.
-                - Only trash visible, no bin/container.
-                - if it's only bin, maybe consider partially visible trash.
-                - Image completely irrelevant (not related to disposal).
-
-                Special Cases:
-                - If no noticeable trash or bin: reason = "No visible bin or trash", passed = false.
-                - If irrelevant image: reason = "Irrelevant image", passed = false, category = "non-recyclable", sub_category = "none".
-
-                Other Important Rules:
-                - Always classify visible trash even if disposal attempt is unclear.
-                - Use only lowercase for category and sub_category.
-                - Output only pure JSON. No extra explanation.
-                """
-
-        raw = chain.run({
-            "instruction": instruction,
-            "image_base64": image_base64
-        })
-        print("Raw response verify_disposal:", raw)
-        return self._parse_response(raw)
