@@ -2,6 +2,8 @@
 
 A modern web application built with Next.js and Supabase.
 
+## Demo: https://www.youtube.com/watch?v=Wt__3WqqY9Q
+
 ## Quick Start
 
 1. Clone the repository
