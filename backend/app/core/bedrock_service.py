@@ -1,11 +1,10 @@
-# app/core/bedrock_service.py
-
 import json
 import boto3
 import re
 from langchain_community.chat_models import BedrockChat
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain.schema import HumanMessage
 from .config import settings
 
 # Initialize Boto3 Bedrock client
@@ -26,18 +25,6 @@ llm = BedrockChat(
     }
 )
 
-# Shared prompt template
-template = PromptTemplate(
-    input_variables=["instruction", "image_base64"],
-    template="""
-        {instruction}
-
-        Image (base64):
-        {image_base64}
-    """
-)
-chain = LLMChain(llm=llm, prompt=template)
-
 
 class BedrockService:
     """Service to interact with AWS Bedrock for trash classification and disposal verification."""
@@ -47,30 +34,26 @@ class BedrockService:
         if not raw:
             raise ValueError("Empty response from Bedrock.")
 
-        # Fix common mistakes: use double quotes
         fixed_raw = raw.strip()
-        fixed_raw = re.sub(r"(?<!\\)'", '"', fixed_raw)  # replace single quotes with double quotes
-        
-        # Remove any leading/trailing content outside JSON
+        fixed_raw = re.sub(r"(?<!\\)'", '"', fixed_raw)
+
         match = re.search(r"({.*})", fixed_raw, re.DOTALL)
         if not match:
             raise ValueError(f"Invalid JSON format from Bedrock: {raw}")
-        
+
         json_str = match.group(1)
-        
+
         try:
             parsed = json.loads(json_str)
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse JSON: {json_str}") from e
 
-        # Normalize output: ensure all values like 'category' and 'sub_category' are lowercase
         if 'category' in parsed and isinstance(parsed['category'], str):
             parsed['category'] = parsed['category'].lower()
 
         if 'sub_category' in parsed and isinstance(parsed['sub_category'], str):
             parsed['sub_category'] = parsed['sub_category'].lower()
 
-        # Also lowercase 'reason' if it exists (optional)
         if 'reason' in parsed and isinstance(parsed['reason'], str):
             parsed['reason'] = parsed['reason'].strip()
 
@@ -95,10 +78,27 @@ class BedrockService:
             "- Only return pure JSON. No additional text."
         )
 
-        raw = chain.run({
-            "instruction": instruction,
-            "image_base64": image_base64
-        })
+        # Create message content with text and image
+        message_content = [
+            {
+                "type": "text",
+                "text": instruction
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image_base64}"
+                }
+            }
+        ]
+        
+        # Create a human message with the multimodal content
+        message = HumanMessage(content=message_content)
+        
+        # Invoke the model with the message
+        response = llm.invoke([message])
+        raw = response.content
+        
         print("Raw response classify_trash:", raw)
         return self._parse_response(raw)
 
@@ -117,16 +117,33 @@ class BedrockService:
         Conditions:
         - "passed": true if both trash and bin/container are visible and action is clear, partially is fine.
         - "passed": false if no trash or bin visible, or action doesn't pass.
-        - Special cases: "if trash bin is clearly visible but no trash, classify as passed
+        - Special cases: if trash bin is clearly visible but no trash, classify as passed.
 
         Strict Rules:
         - Always use lowercase for both 'category' and 'sub_category'.
         - No extra text or explanations, just the JSON.
         """
 
-        raw = chain.run({
-            "instruction": instruction,
-            "image_base64": image_base64
-        })
+        # Create message content with text and image
+        message_content = [
+            {
+                "type": "text",
+                "text": instruction
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image_base64}"
+                }
+            }
+        ]
+        
+        # Create a human message with the multimodal content
+        message = HumanMessage(content=message_content)
+        
+        # Invoke the model with the message
+        response = llm.invoke([message])
+        raw = response.content
+        
         print("Raw response verify_disposal:", raw)
         return self._parse_response(raw)
