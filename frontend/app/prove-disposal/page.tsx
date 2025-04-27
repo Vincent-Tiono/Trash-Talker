@@ -163,7 +163,7 @@ export default function ProveDisposalPage() {
       if (!data.passed) {
         setResult({
           valid: false,
-          message: "Not verified, data.reason",
+          message: "Not verified, " + data.reason,
           xpEarned: 0,
         });
         setIsAnalyzing(false);

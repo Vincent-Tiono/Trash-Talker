@@ -104,30 +104,25 @@ class BedrockService:
 
     def verify_disposal(self, image_base64: str) -> dict:
         """Verify if trash is correctly disposed and classify it."""
-        instruction = (
-            "Analyze the image carefully and determine ONLY if it shows the correct action of properly disposing trash.\n\n"
-            "Return ONLY a JSON object in this exact structure:\n"
-            "{\n"
-            "  \"reason\": \"concise explanation (7 words or fewer)\",\n"
-            "  \"passed\": true or false,\n"
-            "  \"category\": \"recyclable\" or \"non-recyclable\",\n"
-            "  \"sub_category\": \"specific type of trash\"\n"
-            "}\n"
-            "Passing Conditions (for 'passed': true):\n"
-            "- Clear action of throwing/placing trash into bin/container.\n"
-            "- Both trash and bin/container are clearly visible.\n\n"
-            "Failing Conditions (for 'passed': false):\n"
-            "- No visible bin/trash or unclear action.\n"
-            "- Trash present but no disposal action.\n"
-            "- Irrelevant image.\n\n"
-            "Special Cases:\n"
-            "- If unclear disposal action: reason = \"No clear disposal action\", passed = false.\n"
-            "- If irrelevant image: reason = \"Irrelevant image\", passed = false, category = \"non-recyclable\", sub_category = \"none\".\n\n"
-            "Other Important Rules:\n"
-            "- Always classify visible trash even if disposal fails.\n"
-            "- Always use lowercase for category and sub_category.\n"
-            "- Only return pure JSON. No extra explanation."
-        )
+        instruction = """
+        Analyze the image to determine if it shows trash and its bin or container either partially or not and please dont be so strict. Return a JSON object in this structure:
+
+        {
+        "reason": "concise explanation",
+        "passed": true or false,
+        "category": "recyclable" or "non-recyclable",
+        "sub_category": "specific type of trash"
+        }
+
+        Conditions:
+        - "passed": true if both trash and bin/container are visible and action is clear, partially is fine.
+        - "passed": false if no trash or bin visible, or action doesn't pass.
+        - Special cases: "if trash bin is clearly visible but no trash, classify as passed
+
+        Strict Rules:
+        - Always use lowercase for both 'category' and 'sub_category'.
+        - No extra text or explanations, just the JSON.
+        """
 
         raw = chain.run({
             "instruction": instruction,

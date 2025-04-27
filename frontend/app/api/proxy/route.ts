@@ -6,8 +6,8 @@ export const fetchCache = "force-no-store";
 export async function GET(request: NextRequest) {
   try {
     // The URL of the MJPEG stream you want to proxy
-    const streamUrl = "http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg";
-    // const streamUrl = "http://192.168.0.100:5000/fe/mjpeg_stream?";
+    // const streamUrl = "http://pendelcam.kip.uni-heidelberg.de/mjpg/video.mjpg";
+    const streamUrl = "http://192.168.0.100:5000/fe/mjpeg_stream?";
 
     // Fetch the stream from the source
     const response = await fetch(streamUrl, {
