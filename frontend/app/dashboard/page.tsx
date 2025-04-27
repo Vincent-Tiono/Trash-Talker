@@ -29,6 +29,7 @@ import { Disposal, User, UserContext } from "@/hooks/UserContext";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/components/supabase";
 import { getCityFromBrowser } from "../auth/callback/page";
+import { capitalize } from "@/utils/capitalize";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -389,7 +390,8 @@ export default function Dashboard() {
                     recentActivity.map((activity) => (
                       <div key={activity.id} className="activity-item">
                         <div className="activity-icon">
-                          {activity.category === "Recyclable" ? (
+                          {activity.category.toLocaleLowerCase() ===
+                          "recyclable" ? (
                             <Recycle className="h-5 w-5" />
                           ) : (
                             <Trash2 className="h-5 w-5" />
@@ -398,12 +400,12 @@ export default function Dashboard() {
                         <div className="activity-content">
                           <div className="activity-header">
                             <p className="activity-title">
-                              {activity.sub_category}
+                              {capitalize(activity.sub_category)}
                             </p>
                             <p className="activity-points">+100 EXP</p>
                           </div>
                           <div className="activity-footer">
-                            <p>{activity.category}</p>
+                            <p>{capitalize(activity.category)}</p>
                             <p className="activity-date">
                               {(() => {
                                 const now = new Date();

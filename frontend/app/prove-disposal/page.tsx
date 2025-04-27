@@ -10,7 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Upload, ImageIcon, RefreshCw, Check, X, Leaf } from "lucide-react";
+import {
+  Upload,
+  ImageIcon,
+  RefreshCw,
+  Check,
+  X,
+  Leaf,
+  Volume2,
+} from "lucide-react";
 import { useState, useRef } from "react";
 import { Navbar } from "@/components/navbar";
 import { supabase } from "@/components/supabase";
@@ -21,6 +29,9 @@ import { useRouter } from "next/navigation";
 export default function ProveDisposalPage() {
   const { user, setUser } = useContext(UserContext);
   const router = useRouter();
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null
+  );
 
   useEffect(() => {
     const initUser = async () => {
@@ -122,6 +133,12 @@ export default function ProveDisposalPage() {
     fileInputRef.current?.click();
   };
 
+  const playAudio = () => {
+    if (audioElement) {
+      audioElement.play();
+    }
+  };
+
   const analyzeImage = () => {
     setIsAnalyzing(true);
 
@@ -156,6 +173,9 @@ export default function ProveDisposalPage() {
           xpEarned: 0,
         });
 
+        const audio = await fetchAndPlayAudio(access_token, data.reason);
+        setAudioElement(audio);
+
         setIsAnalyzing(false);
         return;
       }
@@ -163,9 +183,13 @@ export default function ProveDisposalPage() {
       if (!data.passed) {
         setResult({
           valid: false,
-          message: "Not verified, data.reason",
+          message: "Not verified, " + data.reason,
           xpEarned: 0,
         });
+
+        const audio = await fetchAndPlayAudio(access_token, data.reason);
+        setAudioElement(audio);
+
         setIsAnalyzing(false);
         return;
       }
@@ -248,6 +272,9 @@ export default function ProveDisposalPage() {
 
       setUser(newUserData);
 
+      const audio = await fetchAndPlayAudio(access_token, data.reason);
+      setAudioElement(audio);
+
       setIsAnalyzing(false);
     };
 
@@ -257,6 +284,7 @@ export default function ProveDisposalPage() {
   const resetUpload = () => {
     setSelectedImage(null);
     setResult(null);
+    setAudioElement(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -341,6 +369,18 @@ export default function ProveDisposalPage() {
                       +{result.xpEarned} EXP earned!
                     </p>
                   )}
+
+                  {audioElement && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 flex items-center gap-2"
+                      onClick={playAudio}
+                    >
+                      <Volume2 className="h-4 w-4" />
+                      Play Audio Feedback
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -391,4 +431,69 @@ export default function ProveDisposalPage() {
       </div>
     </>
   );
+}
+
+// Modified to prepare audio without autoplay
+async function fetchAndPlayAudio(
+  access_token: string,
+  text: string
+): Promise<HTMLAudioElement> {
+  try {
+    console.log("Fetching audio...");
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/trash/tts_polly`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          access_token,
+          text,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error(
+        "Error fetching audio:",
+        response.status,
+        response.statusText
+      );
+      throw new Error(`Failed to fetch audio: ${response.statusText}`);
+    }
+
+    console.log("Audio fetched successfully, processing...");
+
+    const data = await response.json();
+    const base64Audio = data.audio;
+    const contentType = data.content_type || "audio/mpeg";
+
+    if (!base64Audio) {
+      console.error("No audio data received");
+      throw new Error("No audio data received");
+    }
+
+    const byteCharacters = atob(base64Audio);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const audioBlob = new Blob([byteArray], { type: contentType });
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    const audio = new Audio(audioUrl);
+    audio.controls = true; // Optional: you can show native browser controls if you want
+    audio.preload = "auto";
+
+    console.log("Audio element prepared.");
+
+    return audio;
+  } catch (error) {
+    console.error("Error in fetchAndPrepareAudio:", error);
+    throw error;
+  }
 }

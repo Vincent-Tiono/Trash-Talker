@@ -2,16 +2,21 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from ..deps import get_current_user_from_token
-from ..core.bedrock_service import BedrockService
-import json
+from ..core.bedrock_service import BedrockService, PollyService
 
 router = APIRouter(prefix="/trash", tags=["trash"])
 bedrock = BedrockService()
+polly = PollyService()
 
 
 class ImageWithToken(BaseModel):
     access_token: str
     image_base64: str
+
+class TTSPolly(BaseModel):
+    access_token: str
+    text: str
+
 
 @router.post("/scan_trash")
 async def scan_trash(payload: ImageWithToken):
@@ -36,3 +41,14 @@ async def prove_disposal(payload: ImageWithToken):
         return resp
     except Exception as e:
         raise HTTPException(500, f"驗證失敗: {e}")
+
+@router.post("/tts_polly")
+async def tts_polly(payload: TTSPolly):
+    user = get_current_user_from_token(payload.access_token)
+    text = payload.text
+    try:
+        resp = polly.synthesize_speech(text)
+        print(resp)
+        return resp
+    except Exception as e:
+        raise HTTPException(500, f"TTS 失敗: {e}")

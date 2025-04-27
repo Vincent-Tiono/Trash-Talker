@@ -1,5 +1,6 @@
 # app/core/bedrock_service.py
 
+import base64
 import json
 import boto3
 import re
@@ -11,6 +12,23 @@ from .config import settings
 # Initialize Boto3 Bedrock client
 bedrock_client = boto3.client(
     service_name="bedrock-runtime",
+    region_name=settings.AWS_REGION,
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    aws_session_token=settings.AWS_SESSION_TOKEN,
+)
+
+# Polly client for TTS
+polly_client = boto3.client(
+    service_name="polly",
+    region_name=settings.AWS_REGION,
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    aws_session_token=settings.AWS_SESSION_TOKEN,
+)
+
+translate_client = boto3.client(
+    service_name="translate",
     region_name=settings.AWS_REGION,
     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
@@ -38,6 +56,45 @@ template = PromptTemplate(
 )
 chain = LLMChain(llm=llm, prompt=template)
 
+def translate_to_chinese(text: str) -> str:
+    # Use AWS Translate or an external API
+    response = translate_client.translate_text(
+        Text=text,
+        SourceLanguageCode='en',
+        # mandarin 
+        TargetLanguageCode="zh"
+    )
+    return response['TranslatedText']
+
+class PollyService:
+    """Service to interact with AWS Polly for text-to-speech."""
+
+    def synthesize_speech(self, text: str):
+        try:
+            print("Original text:", text)
+            text = translate_to_chinese(text)
+            print("Translated text:", text)
+
+            response = polly_client.synthesize_speech(
+                Text=text,
+                VoiceId='Zhiyu',  # Chinese voice
+                OutputFormat='mp3',
+                LanguageCode='cmn-CN',  # Chinese Mandarin
+            )
+            
+            audio_stream = response.get("AudioStream")
+            if audio_stream:
+                audio_data = audio_stream.read()
+                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                return {
+                    "audio": audio_base64,
+                    "content_type": response.get("ContentType")
+                }
+            else:
+                raise ValueError("Failed to synthesize speech, no AudioStream returned.")
+
+        except Exception as e:
+            raise ValueError(f"Error during speech synthesis: {str(e)}")
 
 class BedrockService:
     """Service to interact with AWS Bedrock for trash classification and disposal verification."""
@@ -105,7 +162,7 @@ class BedrockService:
     def verify_disposal(self, image_base64: str) -> dict:
         """Verify if trash is correctly disposed and classify it."""
         instruction = (
-            "Analyze the image carefully and determine ONLY if it shows the correct action of properly disposing trash.\n\n"
+            "Analyze the image carefully and determine if it shows revelancy of about to throw the trash (trash and trashcan).\n\n"
             "Return ONLY a JSON object in this exact structure:\n"
             "{\n"
             "  \"reason\": \"concise explanation (7 words or fewer)\",\n"
@@ -114,11 +171,10 @@ class BedrockService:
             "  \"sub_category\": \"specific type of trash\"\n"
             "}\n"
             "Passing Conditions (for 'passed': true):\n"
-            "- Clear action of throwing/placing trash into bin/container.\n"
-            "- Both trash and bin/container are clearly visible.\n\n"
+            "- Relevancy of about to throw/place trash into bin/container.\n"
+            "- Both trash and bin/container are visible.\n\n"
             "Failing Conditions (for 'passed': false):\n"
             "- No visible bin/trash or unclear action.\n"
-            "- Trash present but no disposal action.\n"
             "- Irrelevant image.\n\n"
             "Special Cases:\n"
             "- If unclear disposal action: reason = \"No clear disposal action\", passed = false.\n"
