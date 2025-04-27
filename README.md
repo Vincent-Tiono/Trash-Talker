@@ -1,14 +1,8 @@
 # Trash-Talker
 
-A frontend UI for Trash-Talker application.
+A modern web application built with Next.js and Supabase.
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js and npm installed on your system
-
-### Installation
+## Quick Start
 
 1. Clone the repository
 2. Navigate to the frontend directory:
@@ -17,26 +11,36 @@ A frontend UI for Trash-Talker application.
    ```
 3. Install dependencies:
    ```bash
-   npm install -g pnpm
-   ```
-   ```bash
    pnpm install
    ```
-
-### Running the Application
-
-Start the development server:
-
-```bash
-npm run dev
-```
+4. Start the development server:
+   ```bash
+   pnpm dev
+   ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
 
-## Features
+## Tech Stack
 
-- [Add key features here]
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **UI Components**: Radix UI, Tailwind CSS
+- **State Management**: React Hook Form, Zod
+- **Backend**: Supabase
+- **Package Manager**: pnpm
 
-## Technologies Used
+## Project Structure
 
-- [Add technologies used here]
+```
+frontend/
+├── app/          # Next.js app directory
+├── components/   # Reusable UI components
+├── hooks/        # Custom React hooks
+├── lib/          # Utility functions and configurations
+├── public/       # Static assets
+├── styles/       # Global styles
+└── utils/        # Helper functions
+```
+
+## License
+
+See [LICENSE.txt](LICENSE.txt) for details.

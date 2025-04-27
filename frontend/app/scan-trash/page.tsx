@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Camera, RefreshCw, Check, X, Leaf } from "lucide-react";
+import { Camera, RefreshCw, Check, X, Leaf, Volume2 } from "lucide-react";
 import { useState, useRef, useEffect, useContext } from "react";
 import { Navbar } from "@/components/navbar";
 import { supabase } from "@/components/supabase";
@@ -94,8 +94,11 @@ export default function ScanTrashPage() {
     xpEarned: number;
   }>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
 
   const imgRef = useRef<HTMLImageElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const streamUrl = "/api/proxy"; // URL of the MJPEG stream
 
   const captureImage = () => {
@@ -132,6 +135,7 @@ export default function ScanTrashPage() {
 
   const analyzeImage = (imageUrl: string) => {
     setIsAnalyzing(true);
+    setAudioSrc(null);
 
     const scanTrash = async () => {
       const {
@@ -161,14 +165,69 @@ export default function ScanTrashPage() {
 
       setResult(data);
       setIsAnalyzing(false);
+
+      // Generate TTS after result is set
+      generateTTS(data);
     };
 
     scanTrash();
   };
 
+  const generateTTS = async (resultData: any) => {
+    setAudioLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const access_token = session?.access_token || "";
+
+      const message =
+        resultData.category === "recyclable"
+          ? `This is ${resultData.sub_category}. It is recyclable. Please place it in the recycling bin.`
+          : `This is ${resultData.sub_category}. It is non-recyclable. Please place it in the trash bin.`;
+
+      const response = await fetch(
+        process.env.NEXT_PUBLIC_BACKEND_URL + "/trash/generate_tts",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            access_token,
+            message,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error("TTS generation failed");
+        setAudioLoading(false);
+        setAudioSrc(null);
+        return;
+      }
+
+      const data = await response.json();
+      setAudioSrc(data.audio_url);
+    } catch (err) {
+      console.error("Error generating TTS:", err);
+      setAudioSrc(null);
+    } finally {
+      setAudioLoading(false);
+    }
+  };
+
+  const playAudio = () => {
+    if (audioRef.current && audioSrc) {
+      audioRef.current.play();
+    }
+  };
+
   const resetScan = () => {
     setCapturedImage(null);
     setResult(null);
+    setAudioSrc(null);
     setIsCapturing(true);
   };
 
@@ -271,6 +330,28 @@ export default function ScanTrashPage() {
                     <p className="text-primary font-bold">
                       Remember to throw it in the right bin!
                     </p>
+
+                    {audioLoading && (
+                      <div className="mt-3 flex items-center justify-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Loading audio...</span>
+                      </div>
+                    )}
+
+                    {audioSrc && (
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                          onClick={playAudio}
+                        >
+                          <Volume2 className="h-4 w-4" />
+                          <span>Play Audio</span>
+                        </Button>
+                        <audio ref={audioRef} src={audioSrc} />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
